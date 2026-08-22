@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { StatusBadge, DueDot, PendingNoteDot } from "@/components/status/status-badge";
 import { PROJECT_STATUS, TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
+import { KanbanBoard } from "@/components/tasks/kanban-board";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PlusIcon } from "@/components/icons";
 import { DatePicker } from "@/components/ui/date-picker";
 import { fetchPendingNoteTaskIds } from "@/lib/notifications";
@@ -32,6 +34,7 @@ export default function ProyectoDetallePage() {
   const [deleting, setDeleting] = useState(false);
   const [drawerTaskId, setDrawerTaskId] = useState(null);
   const [creatingTask, setCreatingTask] = useState(false);
+  const [view, setView] = useState("list");
 
   async function load() {
     const supabase = createClient();
@@ -64,7 +67,26 @@ export default function ProyectoDetallePage() {
     const { data: t } = await supabase.from("v_task_status").select("*").eq("project_id", id);
     const taskIds = (t ?? []).map((x) => x.id);
     const pending = await fetchPendingNoteTaskIds(supabase, taskIds, user?.id);
-    setTasks((t ?? []).map((x) => ({ ...x, hasPendingNote: pending.has(x.id) })));
+
+    let assigneeMap = {};
+    if (taskIds.length) {
+      const { data: assignees } = await supabase
+        .from("task_assignees")
+        .select("task_id, profiles(name)")
+        .in("task_id", taskIds);
+      assigneeMap = (assignees ?? []).reduce((acc, a) => {
+        acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
+        return acc;
+      }, {});
+    }
+
+    setTasks(
+      (t ?? []).map((x) => ({
+        ...x,
+        hasPendingNote: pending.has(x.id),
+        assignees: assigneeMap[x.id] ?? [],
+      }))
+    );
 
     setLoading(false);
   }
@@ -115,8 +137,8 @@ export default function ProyectoDetallePage() {
   if (!project) return <p className="text-sm text-muted-foreground">No se encontró el proyecto.</p>;
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6">
+      <div className="flex max-w-3xl items-center justify-between">
         <Link href="/proyectos" className="text-sm text-muted-foreground hover:underline">
           ← Proyectos
         </Link>
@@ -125,7 +147,7 @@ export default function ProyectoDetallePage() {
 
       <form
         onSubmit={handleSave}
-        className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-sm"
+        className="flex max-w-3xl flex-col gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-sm"
       >
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Nombre del proyecto</label>
@@ -200,25 +222,38 @@ export default function ProyectoDetallePage() {
       </form>
 
       <div className="rounded-[var(--radius-card)] border border-border bg-surface shadow-sm">
-        <div className="flex items-center justify-between border-b border-border px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
           <h2 className="text-sm font-semibold">Tareas del proyecto</h2>
-          {isAdmin && (
-            <button
-              onClick={() => setCreatingTask(true)}
-              className="flex items-center gap-1.5 rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800"
-            >
-              <PlusIcon />
-              Crear tarea
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <SegmentedControl
+              options={[
+                { id: "list", label: "Lista" },
+                { id: "board", label: "Tablero" },
+              ]}
+              value={view}
+              onChange={setView}
+            />
+            {isAdmin && (
+              <button
+                onClick={() => setCreatingTask(true)}
+                className="flex items-center gap-1.5 rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800"
+              >
+                <PlusIcon />
+                Crear tarea
+              </button>
+            )}
+          </div>
         </div>
         {tasks.length === 0 ? (
           <p className="p-5 text-sm text-muted-foreground">Este proyecto aún no tiene tareas.</p>
+        ) : view === "board" ? (
+          <KanbanBoard tasks={tasks} onOpenTask={setDrawerTaskId} />
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-muted-foreground">
                 <th className="px-5 py-2.5 font-medium">Tarea</th>
+                <th className="px-5 py-2.5 font-medium">Responsable</th>
                 <th className="px-5 py-2.5 font-medium">Fecha de compromiso</th>
                 <th className="px-5 py-2.5 font-medium">Estado</th>
                 <th className="px-5 py-2.5 font-medium"></th>
@@ -233,13 +268,16 @@ export default function ProyectoDetallePage() {
                       {t.title}
                     </span>
                   </td>
-                  <td className="px-5 py-2.5">
+                  <td className="max-w-[140px] truncate px-5 py-2.5 text-muted-foreground">
+                    {t.assignees?.filter(Boolean).join(", ") || "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-5 py-2.5">
                     <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                       <DueDot color={dueSemaphore(t.end_date, { done: t.status === "finalizada" })} />
                       {new Date(t.end_date + "T00:00:00").toLocaleDateString("es-CO")}
                     </span>
                   </td>
-                  <td className="px-5 py-2.5">
+                  <td className="whitespace-nowrap px-5 py-2.5">
                     <StatusBadge status={t.status} map={TASK_STATUS} />
                   </td>
                   <td className="px-5 py-2.5 text-right">
@@ -258,7 +296,7 @@ export default function ProyectoDetallePage() {
       </div>
 
       {isAdmin && (
-        <div className="rounded-[var(--radius-card)] border border-status-overdue/40 bg-white p-6">
+        <div className="max-w-3xl rounded-[var(--radius-card)] border border-status-overdue/40 bg-white p-6">
           <h2 className="mb-1 text-sm font-semibold text-status-overdue">Zona de peligro</h2>
           <p className="mb-4 text-sm text-muted-foreground">
             Esta acción elimina el proyecto y todas sus tareas de forma permanente. Escribe el nombre exacto
