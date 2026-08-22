@@ -6,6 +6,7 @@ import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
 import { PROJECT_STATUS, TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { ChevronDownIcon, ChevronRightIcon } from "@/components/icons";
+import { TaskDrawer } from "@/components/tasks/task-drawer";
 
 const PAGE_SIZE = 5;
 
@@ -17,6 +18,7 @@ export function ProjectsPanel({ isAdmin }) {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [tasksByProject, setTasksByProject] = useState({});
+  const [drawerTask, setDrawerTask] = useState(null); // { taskId, projectId } | null
 
   useEffect(() => {
     const supabase = createClient();
@@ -57,6 +59,29 @@ export function ProjectsPanel({ isAdmin }) {
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageItems = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  async function loadProjectTasks(projectId) {
+    const supabase = createClient();
+    const { data: tasks } = await supabase.from("v_task_status").select("*").eq("project_id", projectId);
+
+    const taskIds = (tasks ?? []).map((t) => t.id);
+    let assigneeMap = {};
+    if (taskIds.length) {
+      const { data: assignees } = await supabase
+        .from("task_assignees")
+        .select("task_id, profiles(name)")
+        .in("task_id", taskIds);
+      assigneeMap = (assignees ?? []).reduce((acc, a) => {
+        acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
+        return acc;
+      }, {});
+    }
+
+    setTasksByProject((prev) => ({
+      ...prev,
+      [projectId]: (tasks ?? []).map((t) => ({ ...t, assignees: assigneeMap[t.id] ?? [] })),
+    }));
+  }
+
   async function toggleExpand(projectId) {
     if (expanded === projectId) {
       setExpanded(null);
@@ -64,29 +89,7 @@ export function ProjectsPanel({ isAdmin }) {
     }
     setExpanded(projectId);
     if (!tasksByProject[projectId]) {
-      const supabase = createClient();
-      const { data: tasks } = await supabase
-        .from("v_task_status")
-        .select("*")
-        .eq("project_id", projectId);
-
-      const taskIds = (tasks ?? []).map((t) => t.id);
-      let assigneeMap = {};
-      if (taskIds.length) {
-        const { data: assignees } = await supabase
-          .from("task_assignees")
-          .select("task_id, profiles(name)")
-          .in("task_id", taskIds);
-        assigneeMap = (assignees ?? []).reduce((acc, a) => {
-          acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
-          return acc;
-        }, {});
-      }
-
-      setTasksByProject((prev) => ({
-        ...prev,
-        [projectId]: (tasks ?? []).map((t) => ({ ...t, assignees: assigneeMap[t.id] ?? [] })),
-      }));
+      await loadProjectTasks(projectId);
     }
   }
 
@@ -139,7 +142,10 @@ export function ProjectsPanel({ isAdmin }) {
 
               {expanded === project.id && (
                 <div className="animate-fade-in pb-3 pl-7">
-                  <ProjectTasksTable tasks={tasksByProject[project.id]} />
+                  <ProjectTasksTable
+                    tasks={tasksByProject[project.id]}
+                    onOpenTask={(taskId) => setDrawerTask({ taskId, projectId: project.id })}
+                  />
                 </div>
               )}
             </div>
@@ -148,11 +154,19 @@ export function ProjectsPanel({ isAdmin }) {
       )}
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      <TaskDrawer
+        open={Boolean(drawerTask)}
+        onClose={() => setDrawerTask(null)}
+        taskId={drawerTask?.taskId}
+        projectId={drawerTask?.projectId}
+        onSaved={() => drawerTask && loadProjectTasks(drawerTask.projectId)}
+      />
     </section>
   );
 }
 
-function ProjectTasksTable({ tasks }) {
+function ProjectTasksTable({ tasks, onOpenTask }) {
   const [sortKey, setSortKey] = useState("end_date");
   const [sortDir, setSortDir] = useState("asc");
 
@@ -219,8 +233,8 @@ function ProjectTasksTable({ tasks }) {
             </td>
             <td className="py-2 text-right">
               <button
+                onClick={() => onOpenTask(task.id)}
                 className="rounded-md border border-border px-2 py-1 text-xs transition hover:bg-neutral-50"
-                title="Disponible en la siguiente iteración"
               >
                 Actualizar
               </button>

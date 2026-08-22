@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
 import { TASK_STATUS, dueSemaphore } from "@/lib/status";
+import { TaskDrawer } from "@/components/tasks/task-drawer";
 
 const PAGE_SIZE = 5;
 
@@ -23,6 +24,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("todas");
   const [page, setPage] = useState(1);
+  const [drawerTaskId, setDrawerTaskId] = useState(null);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -34,27 +36,32 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
       .then(({ data }) => setUsers(data ?? []));
   }, [isAdmin]);
 
-  useEffect(() => {
+  async function loadTasks() {
     if (!selectedUserId) return;
     const supabase = createClient();
-    (async () => {
-      setLoading(true);
-      const { data: assignedRows } = await supabase
-        .from("task_assignees")
-        .select("task_id")
-        .eq("user_id", selectedUserId);
+    setLoading(true);
+    const { data: assignedRows } = await supabase
+      .from("task_assignees")
+      .select("task_id")
+      .eq("user_id", selectedUserId);
 
-      const taskIds = (assignedRows ?? []).map((r) => r.task_id);
-      if (taskIds.length === 0) {
-        setTasks([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data } = await supabase.from("v_task_status").select("*").in("id", taskIds);
-      setTasks(data ?? []);
+    const taskIds = (assignedRows ?? []).map((r) => r.task_id);
+    if (taskIds.length === 0) {
+      setTasks([]);
       setLoading(false);
+      return;
+    }
+
+    const { data } = await supabase.from("v_task_status").select("*").in("id", taskIds);
+    setTasks(data ?? []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    (async () => {
+      await loadTasks();
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUserId]);
 
   const visible = useMemo(() => {
@@ -143,8 +150,8 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
               </span>
               <StatusBadge status={task.status} map={TASK_STATUS} />
               <button
+                onClick={() => setDrawerTaskId(task.id)}
                 className="rounded-md border border-border px-2 py-1 text-xs transition hover:bg-neutral-50"
-                title="Disponible en la siguiente iteración"
               >
                 Actualizar
               </button>
@@ -154,6 +161,13 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
       )}
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      <TaskDrawer
+        open={Boolean(drawerTaskId)}
+        onClose={() => setDrawerTaskId(null)}
+        taskId={drawerTaskId}
+        onSaved={loadTasks}
+      />
     </section>
   );
 }

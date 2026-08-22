@@ -6,6 +6,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { PROJECT_STATUS, TASK_STATUS, dueSemaphore } from "@/lib/status";
+import { TaskDrawer } from "@/components/tasks/task-drawer";
+import { PlusIcon } from "@/components/icons";
 
 export default function ProyectoDetallePage() {
   const { id } = useParams();
@@ -26,6 +28,8 @@ export default function ProyectoDetallePage() {
 
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [drawerTaskId, setDrawerTaskId] = useState(null);
+  const [creatingTask, setCreatingTask] = useState(false);
 
   async function load() {
     const supabase = createClient();
@@ -204,7 +208,18 @@ export default function ProyectoDetallePage() {
       </form>
 
       <div className="rounded-[var(--radius-card)] border border-border bg-surface shadow-sm">
-        <h2 className="border-b border-border px-5 py-3 text-sm font-semibold">Tareas del proyecto</h2>
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
+          <h2 className="text-sm font-semibold">Tareas del proyecto</h2>
+          {isAdmin && (
+            <button
+              onClick={() => setCreatingTask(true)}
+              className="flex items-center gap-1.5 rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800"
+            >
+              <PlusIcon />
+              Crear tarea
+            </button>
+          )}
+        </div>
         {tasks.length === 0 ? (
           <p className="p-5 text-sm text-muted-foreground">Este proyecto aún no tiene tareas.</p>
         ) : (
@@ -214,6 +229,7 @@ export default function ProyectoDetallePage() {
                 <th className="px-5 py-2.5 font-medium">Tarea</th>
                 <th className="px-5 py-2.5 font-medium">Fecha de compromiso</th>
                 <th className="px-5 py-2.5 font-medium">Estado</th>
+                <th className="px-5 py-2.5 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -229,14 +245,19 @@ export default function ProyectoDetallePage() {
                   <td className="px-5 py-2.5">
                     <StatusBadge status={t.status} map={TASK_STATUS} />
                   </td>
+                  <td className="px-5 py-2.5 text-right">
+                    <button
+                      onClick={() => setDrawerTaskId(t.id)}
+                      className="rounded-md border border-border px-2.5 py-1 text-xs transition hover:bg-neutral-50"
+                    >
+                      Ver / editar
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
-        <p className="border-t border-border px-5 py-3 text-xs text-muted-foreground">
-          La creación y edición de tareas llega en la siguiente iteración.
-        </p>
       </div>
 
       {isAdmin && (
@@ -262,6 +283,20 @@ export default function ProyectoDetallePage() {
           </div>
         </div>
       )}
+
+      <TaskDrawer
+        open={Boolean(drawerTaskId)}
+        onClose={() => setDrawerTaskId(null)}
+        taskId={drawerTaskId}
+        onSaved={load}
+      />
+      <TaskDrawer
+        open={creatingTask}
+        onClose={() => setCreatingTask(false)}
+        taskId={null}
+        projectId={id}
+        onSaved={load}
+      />
     </div>
   );
 }
