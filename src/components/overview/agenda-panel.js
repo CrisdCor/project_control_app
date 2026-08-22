@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Pagination } from "@/components/ui/pagination";
-import { DueDot } from "@/components/status/status-badge";
 import { agendaSemaphore } from "@/lib/status";
-import { PlusIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon } from "@/components/icons";
 
 const PAGE_SIZE = 10;
 
@@ -89,6 +88,12 @@ export function AgendaPanel({ userId }) {
     load();
   }
 
+  async function handleDelete(item) {
+    const supabase = createClient();
+    await supabase.from("agenda_items").delete().eq("id", item.id);
+    load();
+  }
+
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-sm">
       <h2 className="mb-4 text-sm font-semibold">Mi agenda</h2>
@@ -162,13 +167,23 @@ export function AgendaPanel({ userId }) {
                 </button>
               )}
 
-              <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-                <DueDot color={agendaSemaphore(item.due_date)} />
+              <span
+                className="shrink-0 text-xs font-medium"
+                style={{ color: agendaSemaphore(item.due_date) }}
+              >
                 {new Date(item.due_date + "T00:00:00").toLocaleDateString("es-CO", {
                   day: "2-digit",
                   month: "2-digit",
                 })}
               </span>
+
+              <button
+                onClick={() => handleDelete(item)}
+                className="shrink-0 text-muted-foreground transition hover:text-status-overdue"
+                title="Eliminar"
+              >
+                <TrashIcon />
+              </button>
             </div>
           ))}
         </div>

@@ -31,7 +31,7 @@ export default function OverviewPage() {
   if (!user) return null;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="flex flex-col gap-6">
         <ProjectsPanel isAdmin={isAdmin} />
         <MyTasksPanel currentUserId={user.id} isAdmin={isAdmin} />

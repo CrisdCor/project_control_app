@@ -6,6 +6,7 @@ import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
 import { TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 const PAGE_SIZE = 5;
 
@@ -116,23 +117,15 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
         )}
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        {QUICK_FILTERS.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => {
-              setFilter(f.id);
-              setPage(1);
-            }}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-              filter === f.id
-                ? "border-black bg-black text-white"
-                : "border-border bg-white text-foreground hover:bg-neutral-50"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="mb-4">
+        <SegmentedControl
+          options={QUICK_FILTERS}
+          value={filter}
+          onChange={(id) => {
+            setFilter(id);
+            setPage(1);
+          }}
+        />
       </div>
 
       {loading ? (
