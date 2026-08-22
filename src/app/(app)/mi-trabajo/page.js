@@ -25,6 +25,7 @@ export default function MiTrabajoPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [ready, setReady] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("todas");
@@ -54,19 +55,28 @@ export default function MiTrabajoPage() {
           setUsers(all ?? []);
         }
       }
+      setReady(true);
     })();
   }, []);
 
   async function loadTasks() {
-    if (!selectedUserId) return;
+    if (!ready) return;
     const supabase = createClient();
     setLoading(true);
-    const { data: assignedRows } = await supabase
-      .from("task_assignees")
-      .select("task_id")
-      .eq("user_id", selectedUserId);
 
-    const taskIds = (assignedRows ?? []).map((r) => r.task_id);
+    let taskIds;
+    if (selectedUserId) {
+      const { data: assignedRows } = await supabase
+        .from("task_assignees")
+        .select("task_id")
+        .eq("user_id", selectedUserId);
+      taskIds = (assignedRows ?? []).map((r) => r.task_id);
+    } else {
+      // "Todos los responsables" (solo admin): todas las tareas visibles
+      const { data: allTasks } = await supabase.from("v_task_status").select("id");
+      taskIds = (allTasks ?? []).map((t) => t.id);
+    }
+
     if (taskIds.length === 0) {
       setTasks([]);
       setLoading(false);
@@ -75,7 +85,26 @@ export default function MiTrabajoPage() {
 
     const { data } = await supabase.from("v_task_status").select("*").in("id", taskIds);
     const pending = await fetchPendingNoteTaskIds(supabase, taskIds, currentUserId);
-    setTasks((data ?? []).map((t) => ({ ...t, hasPendingNote: pending.has(t.id) })));
+
+    let assigneeMap = {};
+    if (!selectedUserId) {
+      const { data: assignees } = await supabase
+        .from("task_assignees")
+        .select("task_id, profiles(name)")
+        .in("task_id", taskIds);
+      assigneeMap = (assignees ?? []).reduce((acc, a) => {
+        acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
+        return acc;
+      }, {});
+    }
+
+    setTasks(
+      (data ?? []).map((t) => ({
+        ...t,
+        hasPendingNote: pending.has(t.id),
+        assignees: assigneeMap[t.id],
+      }))
+    );
     setLoading(false);
   }
 
@@ -85,7 +114,7 @@ export default function MiTrabajoPage() {
       setPage(1);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedUserId]);
+  }, [selectedUserId, ready]);
 
   const visible = useMemo(() => {
     let list = tasks;
@@ -146,9 +175,8 @@ export default function MiTrabajoPage() {
 
           {isAdmin && users.length > 0 && (
             <FilterDropdown
-              placeholder="Selecciona responsable"
-              allowClear={false}
-              value={selectedUserId}
+              placeholder="Todos los responsables"
+              value={selectedUserId ?? ""}
               onChange={setSelectedUserId}
               options={users.map((u) => ({ value: u.id, label: u.name }))}
             />
@@ -167,7 +195,14 @@ export default function MiTrabajoPage() {
               <div key={task.id} className="flex items-center gap-3 py-3">
                 <DueDot color={dueSemaphore(task.end_date, { done: task.status === "finalizada" })} />
                 <PendingNoteDot pending={task.hasPendingNote} />
-                <span className="min-w-0 flex-1 truncate text-sm">{task.title}</span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {task.title}
+                  {task.assignees?.length ? (
+                    <span className="ml-1.5 text-xs text-muted-foreground">
+                      · {task.assignees.filter(Boolean).join(", ")}
+                    </span>
+                  ) : null}
+                </span>
                 <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                   {new Date(task.end_date + "T00:00:00").toLocaleDateString("es-CO")}
                 </span>

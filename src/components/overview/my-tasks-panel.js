@@ -40,15 +40,22 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
   }, [isAdmin]);
 
   async function loadTasks() {
-    if (!selectedUserId) return;
     const supabase = createClient();
     setLoading(true);
-    const { data: assignedRows } = await supabase
-      .from("task_assignees")
-      .select("task_id")
-      .eq("user_id", selectedUserId);
 
-    const taskIds = (assignedRows ?? []).map((r) => r.task_id);
+    let taskIds;
+    if (selectedUserId) {
+      const { data: assignedRows } = await supabase
+        .from("task_assignees")
+        .select("task_id")
+        .eq("user_id", selectedUserId);
+      taskIds = (assignedRows ?? []).map((r) => r.task_id);
+    } else {
+      // "Todos los responsables" (solo admin): todas las tareas visibles
+      const { data: allTasks } = await supabase.from("v_task_status").select("id");
+      taskIds = (allTasks ?? []).map((t) => t.id);
+    }
+
     if (taskIds.length === 0) {
       setTasks([]);
       setLoading(false);
@@ -57,7 +64,26 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
 
     const { data } = await supabase.from("v_task_status").select("*").in("id", taskIds);
     const pending = await fetchPendingNoteTaskIds(supabase, taskIds, currentUserId);
-    setTasks((data ?? []).map((t) => ({ ...t, hasPendingNote: pending.has(t.id) })));
+
+    let assigneeMap = {};
+    if (!selectedUserId) {
+      const { data: assignees } = await supabase
+        .from("task_assignees")
+        .select("task_id, profiles(name)")
+        .in("task_id", taskIds);
+      assigneeMap = (assignees ?? []).reduce((acc, a) => {
+        acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
+        return acc;
+      }, {});
+    }
+
+    setTasks(
+      (data ?? []).map((t) => ({
+        ...t,
+        hasPendingNote: pending.has(t.id),
+        assignees: assigneeMap[t.id],
+      }))
+    );
     setLoading(false);
   }
 
@@ -114,8 +140,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
           />
           {isAdmin && users.length > 0 && (
             <FilterDropdown
-              placeholder="Selecciona responsable"
-              allowClear={false}
+              placeholder="Todos los responsables"
               value={selectedUserId}
               onChange={(v) => {
                 setSelectedUserId(v);
@@ -137,7 +162,14 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
             <div key={task.id} className="flex items-center gap-3 py-2">
               <DueDot color={dueSemaphore(task.end_date)} />
               <PendingNoteDot pending={task.hasPendingNote} />
-              <span className="min-w-0 flex-1 truncate text-sm">{task.title}</span>
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {task.title}
+                {task.assignees?.length ? (
+                  <span className="ml-1.5 text-xs text-muted-foreground">
+                    · {task.assignees.filter(Boolean).join(", ")}
+                  </span>
+                ) : null}
+              </span>
               <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                 {new Date(task.end_date + "T00:00:00").toLocaleDateString("es-CO")}
               </span>
