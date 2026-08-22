@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { StatusBadge } from "@/components/status/status-badge";
 import { PROJECT_STATUS } from "@/lib/status";
 import { ProjectFormModal } from "@/components/proyectos/project-form-modal";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { PlusIcon } from "@/components/icons";
 
 export default function ProyectosPage() {
@@ -91,32 +92,20 @@ export default function ProyectosPage() {
           className="w-56 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
         />
 
-        <select
+        <FilterDropdown
+          placeholder="Todos los estados"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-md border border-border bg-white px-2.5 py-2 text-sm outline-none"
-        >
-          <option value="">Todos los estados</option>
-          {Object.entries(PROJECT_STATUS).map(([key, v]) => (
-            <option key={key} value={key}>
-              {v.label}
-            </option>
-          ))}
-        </select>
+          onChange={setStatusFilter}
+          options={Object.entries(PROJECT_STATUS).map(([key, v]) => ({ value: key, label: v.label }))}
+        />
 
         {Object.keys(leaders).length > 0 && (
-          <select
+          <FilterDropdown
+            placeholder="Todos los líderes"
             value={leaderFilter}
-            onChange={(e) => setLeaderFilter(e.target.value)}
-            className="rounded-md border border-border bg-white px-2.5 py-2 text-sm outline-none"
-          >
-            <option value="">Todos los líderes</option>
-            {Object.entries(leaders).map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            ))}
-          </select>
+            onChange={setLeaderFilter}
+            options={Object.entries(leaders).map(([id, name]) => ({ value: id, label: name }))}
+          />
         )}
 
         <label className="flex items-center gap-1.5 text-sm text-muted-foreground">

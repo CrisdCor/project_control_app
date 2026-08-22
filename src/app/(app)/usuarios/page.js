@@ -5,6 +5,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { UserFormModal } from "@/components/usuarios/user-form-modal";
 import { deleteUserAction } from "@/app/(app)/usuarios/actions";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { PlusIcon } from "@/components/icons";
 
 export default function UsuariosPage() {
@@ -88,15 +89,15 @@ export default function UsuariosPage() {
           className="w-64 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
         />
 
-        <select
+        <FilterDropdown
+          placeholder="Todos los roles"
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="rounded-md border border-border bg-white px-2.5 py-2 text-sm outline-none"
-        >
-          <option value="">Todos los roles</option>
-          <option value="admin">Administrador</option>
-          <option value="gestor">Gestor</option>
-        </select>
+          onChange={setRoleFilter}
+          options={[
+            { value: "admin", label: "Administrador" },
+            { value: "gestor", label: "Gestor" },
+          ]}
+        />
 
         <button
           onClick={() => {

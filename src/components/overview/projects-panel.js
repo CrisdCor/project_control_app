@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { PROJECT_STATUS, TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { ChevronDownIcon, ChevronRightIcon } from "@/components/icons";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 
 const PAGE_SIZE = 5;
 
@@ -98,21 +99,15 @@ export function ProjectsPanel({ isAdmin }) {
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">Proyectos</h2>
         {isAdmin && Object.keys(leaders).length > 0 && (
-          <select
+          <FilterDropdown
+            placeholder="Todos los líderes"
             value={leaderFilter}
-            onChange={(e) => {
-              setLeaderFilter(e.target.value);
+            onChange={(v) => {
+              setLeaderFilter(v);
               setPage(1);
             }}
-            className="rounded-md border border-border bg-white px-2.5 py-1.5 text-xs outline-none"
-          >
-            <option value="">Todos los líderes</option>
-            {Object.entries(leaders).map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            ))}
-          </select>
+            options={Object.entries(leaders).map(([id, name]) => ({ value: id, label: name }))}
+          />
         )}
       </div>
 

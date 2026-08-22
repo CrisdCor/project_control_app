@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 
 const PAGE_SIZE = 5;
 
@@ -100,20 +101,16 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">Mi trabajo</h2>
         {isAdmin && users.length > 0 && (
-          <select
+          <FilterDropdown
+            placeholder="Selecciona responsable"
+            allowClear={false}
             value={selectedUserId}
-            onChange={(e) => {
-              setSelectedUserId(e.target.value);
+            onChange={(v) => {
+              setSelectedUserId(v);
               setPage(1);
             }}
-            className="rounded-md border border-border bg-white px-2.5 py-1.5 text-xs outline-none"
-          >
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+            options={users.map((u) => ({ value: u.id, label: u.name }))}
+          />
         )}
       </div>
 

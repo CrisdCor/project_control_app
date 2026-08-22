@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 
 const PAGE_SIZE = 10;
 
@@ -142,17 +143,13 @@ export default function MiTrabajoPage() {
           </label>
 
           {isAdmin && users.length > 0 && (
-            <select
-              value={selectedUserId ?? ""}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="rounded-md border border-border bg-white px-2.5 py-1.5 text-sm outline-none"
-            >
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+            <FilterDropdown
+              placeholder="Selecciona responsable"
+              allowClear={false}
+              value={selectedUserId}
+              onChange={setSelectedUserId}
+              options={users.map((u) => ({ value: u.id, label: u.name }))}
+            />
           )}
         </div>
       </div>
