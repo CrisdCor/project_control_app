@@ -99,10 +99,10 @@ export function AgendaPanel({ userId }) {
   }
 
   return (
-    <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-sm">
-      <h2 className="mb-4 text-sm font-semibold">Mi agenda</h2>
+    <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
+      <h2 className="mb-3 text-sm font-semibold">Mi agenda</h2>
 
-      <form onSubmit={handleAdd} className="mb-4 flex flex-col gap-2">
+      <form onSubmit={handleAdd} className="mb-3 flex flex-col gap-2">
         <input
           value={newText}
           onChange={(e) => setNewText(e.target.value)}

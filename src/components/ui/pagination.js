@@ -2,7 +2,7 @@ export function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between border-t border-border px-1 pt-3 text-sm">
+    <div className="flex items-center justify-between border-t border-border px-1 pt-2 text-sm">
       <button
         onClick={() => onChange(page - 1)}
         disabled={page <= 1}

@@ -99,8 +99,8 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
   const pageItems = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <section className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-sm">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <section className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="shrink-0 text-sm font-semibold">Mi trabajo</h2>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -134,7 +134,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
       ) : (
         <div className="flex flex-col divide-y divide-border">
           {pageItems.map((task) => (
-            <div key={task.id} className="flex items-center gap-3 py-2.5">
+            <div key={task.id} className="flex items-center gap-3 py-2">
               <DueDot color={dueSemaphore(task.end_date)} />
               <PendingNoteDot pending={task.hasPendingNote} />
               <span className="min-w-0 flex-1 truncate text-sm">{task.title}</span>

@@ -102,8 +102,8 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
   }
 
   return (
-    <section className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <section className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">Proyectos</h2>
         {isAdmin && Object.keys(leaders).length > 0 && (
           <FilterDropdown
@@ -128,7 +128,7 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
             <div key={project.id}>
               <button
                 onClick={() => toggleExpand(project.id)}
-                className="flex w-full items-center gap-3 py-2.5 text-left transition hover:bg-neutral-50"
+                className="flex w-full items-center gap-3 py-2 text-left transition hover:bg-neutral-50"
               >
                 {expanded === project.id ? (
                   <ChevronDownIcon className="shrink-0 text-muted-foreground" />

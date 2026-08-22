@@ -22,7 +22,7 @@ export function Header() {
   const title = resolveTitle(pathname);
 
   return (
-    <header className="relative flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
+    <header className="relative flex h-12 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
       <span className="text-sm font-semibold">Control de Proyectos</span>
       <span className="absolute left-1/2 -translate-x-1/2 text-sm font-medium text-muted-foreground">
         {title}
