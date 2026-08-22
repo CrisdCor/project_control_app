@@ -39,11 +39,13 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
   const [standbyPerson, setStandbyPerson] = useState("");
   const [standbyStartDate, setStandbyStartDate] = useState(todayISO());
   const [cancelReason, setCancelReason] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   async function load() {
     if (!open) return;
     setLoading(true);
     setError(null);
+    setConfirmDelete(false);
     const supabase = createClient();
 
     const {
@@ -250,6 +252,13 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
     reloadAndNotify();
   }
 
+  async function handleDeleteTask() {
+    const supabase = createClient();
+    await supabase.from("tasks").delete().eq("id", taskId);
+    onSaved?.();
+    onClose();
+  }
+
   if (!open) return null;
 
   return (
@@ -449,6 +458,38 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
                     isAdmin={isAdmin}
                     onChanged={reloadAndNotify}
                   />
+                </div>
+              )}
+
+              {!isCreate && isAdmin && (
+                <div className="rounded-md border border-status-overdue/40 p-4">
+                  <h3 className="mb-2 text-sm font-semibold text-status-overdue">Eliminar tarea</h3>
+                  <p className="mb-3 text-sm text-muted-foreground">
+                    Esta acción elimina la tarea, su checklist y su historial de forma permanente.
+                  </p>
+                  {confirmDelete ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleDeleteTask}
+                        className="rounded-md bg-status-overdue px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+                      >
+                        Confirmar eliminación
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        className="rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-neutral-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="rounded-md border border-status-overdue/40 px-3 py-1.5 text-xs text-status-overdue transition hover:bg-red-50"
+                    >
+                      Eliminar tarea
+                    </button>
+                  )}
                 </div>
               )}
             </div>

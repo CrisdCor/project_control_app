@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 export default function PerfilPage() {
+  const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [name, setName] = useState("");
   const [area, setArea] = useState("");
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -39,17 +44,34 @@ export default function PerfilPage() {
     setSavingProfile(true);
     setMessage(null);
     setError(null);
+
     const supabase = createClient();
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ name, area })
-      .eq("id", profile.id);
+    const patch = { name, area };
+
+    if (photoFile) {
+      const ext = photoFile.name.split(".").pop() || "jpg";
+      const path = `${profile.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, photoFile, { upsert: true, contentType: photoFile.type });
+
+      if (!uploadError) {
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("avatars").getPublicUrl(path);
+        patch.photo_url = `${publicUrl}?t=${Date.now()}`;
+      }
+    }
+
+    const { error: updateError } = await supabase.from("profiles").update(patch).eq("id", profile.id);
     setSavingProfile(false);
     if (updateError) {
       setError("No se pudo guardar el perfil.");
       return;
     }
+    setPhotoFile(null);
     setMessage("Perfil actualizado.");
+    router.refresh();
   }
 
   async function handleChangePassword(e) {
@@ -94,6 +116,36 @@ export default function PerfilPage() {
         className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-sm"
       >
         <h2 className="text-sm font-semibold">Mi información</h2>
+
+        <div className="flex items-center gap-4">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-neutral-200">
+            {photoPreview || profile.photo_url ? (
+              <Image
+                src={photoPreview || profile.photo_url}
+                alt={profile.name}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-lg font-medium text-neutral-500">
+                {profile.name.slice(0, 1).toUpperCase()}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Foto de perfil</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setPhotoFile(file);
+                setPhotoPreview(file ? URL.createObjectURL(file) : null);
+              }}
+              className="text-sm"
+            />
+          </div>
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Usuario (correo)</label>

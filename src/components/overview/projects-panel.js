@@ -167,32 +167,10 @@ export function ProjectsPanel({ isAdmin }) {
 }
 
 function ProjectTasksTable({ tasks, onOpenTask }) {
-  const [sortKey, setSortKey] = useState("end_date");
-  const [sortDir, setSortDir] = useState("asc");
-
   if (!tasks) return <p className="text-xs text-muted-foreground">Cargando tareas...</p>;
   if (tasks.length === 0) return <p className="text-xs text-muted-foreground">Este proyecto aún no tiene tareas.</p>;
 
-  function toggleSort(key) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  }
-
-  const sorted = [...tasks].sort((a, b) => {
-    let av = a[sortKey] ?? "";
-    let bv = b[sortKey] ?? "";
-    if (sortKey === "end_date") {
-      av = new Date(av);
-      bv = new Date(bv);
-    }
-    if (av < bv) return sortDir === "asc" ? -1 : 1;
-    if (av > bv) return sortDir === "asc" ? 1 : -1;
-    return 0;
-  });
+  const sorted = [...tasks].sort((a, b) => new Date(a.end_date) - new Date(b.end_date));
 
   const cols = [
     { key: "title", label: "Tarea" },
@@ -206,12 +184,8 @@ function ProjectTasksTable({ tasks, onOpenTask }) {
       <thead>
         <tr className="text-left text-muted-foreground">
           {cols.map((c) => (
-            <th
-              key={c.key}
-              onClick={() => toggleSort(c.key)}
-              className="cursor-pointer select-none py-1.5 pr-3 font-medium"
-            >
-              {c.label} {sortKey === c.key && (sortDir === "asc" ? "↑" : "↓")}
+            <th key={c.key} className="py-1.5 pr-3 font-medium">
+              {c.label}
             </th>
           ))}
           <th className="py-1.5 font-medium"></th>
