@@ -169,9 +169,9 @@ function ProjectTasksTable({ tasks, onOpenTask }) {
 
   const cols = [
     { key: "title", label: "Tarea" },
-    { key: "assignees", label: "Responsable" },
-    { key: "end_date", label: "Fecha de compromiso" },
-    { key: "status", label: "Estado" },
+    { key: "assignees", label: "Responsable", className: "w-[110px]" },
+    { key: "end_date", label: "Fecha de compromiso", className: "whitespace-nowrap" },
+    { key: "status", label: "Estado", className: "whitespace-nowrap" },
   ];
 
   return (
@@ -179,7 +179,7 @@ function ProjectTasksTable({ tasks, onOpenTask }) {
       <thead>
         <tr className="text-left text-muted-foreground">
           {cols.map((c) => (
-            <th key={c.key} className="py-1.5 pr-3 font-medium">
+            <th key={c.key} className={`py-1.5 pr-3 font-medium ${c.className ?? ""}`}>
               {c.label}
             </th>
           ))}
@@ -190,17 +190,19 @@ function ProjectTasksTable({ tasks, onOpenTask }) {
         {sorted.map((task) => (
           <tr key={task.id} className="border-t border-border">
             <td className="py-2 pr-3">{task.title}</td>
-            <td className="py-2 pr-3">{(task.assignees ?? []).filter(Boolean).join(", ") || "—"}</td>
-            <td className="py-2 pr-3">
+            <td className="max-w-[110px] truncate py-2 pr-3" title={(task.assignees ?? []).filter(Boolean).join(", ")}>
+              {(task.assignees ?? []).filter(Boolean).join(", ") || "—"}
+            </td>
+            <td className="whitespace-nowrap py-2 pr-3">
               <span className="inline-flex items-center gap-1.5">
                 <DueDot color={dueSemaphore(task.end_date, { done: task.status === "finalizada" })} />
                 {new Date(task.end_date + "T00:00:00").toLocaleDateString("es-CO")}
               </span>
             </td>
-            <td className="py-2 pr-3">
+            <td className="whitespace-nowrap py-2 pr-3">
               <StatusBadge status={task.status} map={TASK_STATUS} />
             </td>
-            <td className="py-2 text-right">
+            <td className="whitespace-nowrap py-2 text-right">
               <button
                 onClick={() => onOpenTask(task.id)}
                 className="rounded-md border border-border px-2 py-1 text-xs transition hover:bg-neutral-50"
