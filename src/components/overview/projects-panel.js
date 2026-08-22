@@ -2,16 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { StatusBadge, DueDot } from "@/components/status/status-badge";
+import { StatusBadge, DueDot, PendingNoteDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
 import { PROJECT_STATUS, TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { ChevronDownIcon, ChevronRightIcon } from "@/components/icons";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { fetchPendingNoteTaskIds } from "@/lib/notifications";
 
 const PAGE_SIZE = 5;
 
-export function ProjectsPanel({ isAdmin }) {
+export function ProjectsPanel({ isAdmin, currentUserId }) {
   const [projects, setProjects] = useState([]);
   const [leaders, setLeaders] = useState({});
   const [leaderFilter, setLeaderFilter] = useState("");
@@ -77,9 +78,15 @@ export function ProjectsPanel({ isAdmin }) {
       }, {});
     }
 
+    const pending = await fetchPendingNoteTaskIds(supabase, taskIds, currentUserId);
+
     setTasksByProject((prev) => ({
       ...prev,
-      [projectId]: (tasks ?? []).map((t) => ({ ...t, assignees: assigneeMap[t.id] ?? [] })),
+      [projectId]: (tasks ?? []).map((t) => ({
+        ...t,
+        assignees: assigneeMap[t.id] ?? [],
+        hasPendingNote: pending.has(t.id),
+      })),
     }));
   }
 
@@ -189,7 +196,12 @@ function ProjectTasksTable({ tasks, onOpenTask }) {
       <tbody>
         {sorted.map((task) => (
           <tr key={task.id} className="border-t border-border">
-            <td className="py-2 pr-3">{task.title}</td>
+            <td className="py-2 pr-3">
+              <span className="inline-flex items-center gap-1.5">
+                <PendingNoteDot pending={task.hasPendingNote} />
+                {task.title}
+              </span>
+            </td>
             <td className="max-w-[110px] truncate py-2 pr-3" title={(task.assignees ?? []).filter(Boolean).join(", ")}>
               {(task.assignees ?? []).filter(Boolean).join(", ") || "—"}
             </td>

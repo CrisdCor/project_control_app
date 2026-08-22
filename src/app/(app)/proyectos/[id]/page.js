@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { StatusBadge, DueDot } from "@/components/status/status-badge";
+import { StatusBadge, DueDot, PendingNoteDot } from "@/components/status/status-badge";
 import { PROJECT_STATUS, TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { PlusIcon } from "@/components/icons";
 import { DatePicker } from "@/components/ui/date-picker";
+import { fetchPendingNoteTaskIds } from "@/lib/notifications";
 
 export default function ProyectoDetallePage() {
   const { id } = useParams();
@@ -61,7 +62,9 @@ export default function ProyectoDetallePage() {
     setProfiles(profs ?? []);
 
     const { data: t } = await supabase.from("v_task_status").select("*").eq("project_id", id);
-    setTasks(t ?? []);
+    const taskIds = (t ?? []).map((x) => x.id);
+    const pending = await fetchPendingNoteTaskIds(supabase, taskIds, user?.id);
+    setTasks((t ?? []).map((x) => ({ ...x, hasPendingNote: pending.has(x.id) })));
 
     setLoading(false);
   }
@@ -224,7 +227,12 @@ export default function ProyectoDetallePage() {
             <tbody>
               {tasks.map((t) => (
                 <tr key={t.id} className="border-t border-border">
-                  <td className="px-5 py-2.5">{t.title}</td>
+                  <td className="px-5 py-2.5">
+                    <span className="inline-flex items-center gap-1.5">
+                      <PendingNoteDot pending={t.hasPendingNote} />
+                      {t.title}
+                    </span>
+                  </td>
                   <td className="px-5 py-2.5">
                     <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                       <DueDot color={dueSemaphore(t.end_date, { done: t.status === "finalizada" })} />

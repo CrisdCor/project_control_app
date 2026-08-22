@@ -14,3 +14,13 @@ export function StatusBadge({ status, map }) {
 export function DueDot({ color }) {
   return <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />;
 }
+
+export function PendingNoteDot({ pending }) {
+  if (!pending) return null;
+  return (
+    <span
+      className="inline-block h-2 w-2 shrink-0 rounded-full bg-status-attention"
+      title="Tienes una nota sin leer en esta tarea"
+    />
+  );
+}

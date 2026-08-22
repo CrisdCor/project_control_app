@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MultiSelectUsers } from "@/components/tasks/multi-select-users";
+import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { ChecklistSection } from "@/components/tasks/checklist-section";
 import { StatusBadge } from "@/components/status/status-badge";
 import { TASK_STATUS } from "@/lib/status";
 import { DatePicker } from "@/components/ui/date-picker";
+import { markTaskNotesRead } from "@/lib/notifications";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -91,6 +92,10 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
         .eq("task_id", taskId)
         .order("created_at");
       setChecklist(items ?? []);
+
+      if (user) {
+        markTaskNotesRead(supabase, taskId, user.id);
+      }
     } else {
       setTitle("");
       setStartDate(todayISO());
@@ -299,10 +304,11 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium">Responsable(s)</label>
-                  <MultiSelectUsers
-                    profiles={profiles}
+                  <MultiSelectDropdown
+                    options={profiles.map((p) => ({ id: p.id, name: p.name }))}
                     selectedIds={assigneeIds}
                     onChange={setAssigneeIds}
+                    placeholder="Selecciona responsables..."
                     disabled={!isCreate && !canEditAssignees}
                   />
                 </div>

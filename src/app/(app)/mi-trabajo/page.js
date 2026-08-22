@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { StatusBadge, DueDot } from "@/components/status/status-badge";
+import { StatusBadge, DueDot, PendingNoteDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
 import { TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { fetchPendingNoteTaskIds } from "@/lib/notifications";
 
 const PAGE_SIZE = 10;
 
@@ -73,7 +74,8 @@ export default function MiTrabajoPage() {
     }
 
     const { data } = await supabase.from("v_task_status").select("*").in("id", taskIds);
-    setTasks(data ?? []);
+    const pending = await fetchPendingNoteTaskIds(supabase, taskIds, currentUserId);
+    setTasks((data ?? []).map((t) => ({ ...t, hasPendingNote: pending.has(t.id) })));
     setLoading(false);
   }
 
@@ -164,6 +166,7 @@ export default function MiTrabajoPage() {
             {pageItems.map((task) => (
               <div key={task.id} className="flex items-center gap-3 py-3">
                 <DueDot color={dueSemaphore(task.end_date, { done: task.status === "finalizada" })} />
+                <PendingNoteDot pending={task.hasPendingNote} />
                 <span className="min-w-0 flex-1 truncate text-sm">{task.title}</span>
                 <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                   {new Date(task.end_date + "T00:00:00").toLocaleDateString("es-CO")}

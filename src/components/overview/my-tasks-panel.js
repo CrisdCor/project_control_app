@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { StatusBadge, DueDot } from "@/components/status/status-badge";
+import { StatusBadge, DueDot, PendingNoteDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
 import { TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { fetchPendingNoteTaskIds } from "@/lib/notifications";
 
 const PAGE_SIZE = 5;
 
@@ -55,7 +56,8 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
     }
 
     const { data } = await supabase.from("v_task_status").select("*").in("id", taskIds);
-    setTasks(data ?? []);
+    const pending = await fetchPendingNoteTaskIds(supabase, taskIds, currentUserId);
+    setTasks((data ?? []).map((t) => ({ ...t, hasPendingNote: pending.has(t.id) })));
     setLoading(false);
   }
 
@@ -98,31 +100,31 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
 
   return (
     <section className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-sm">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold">Mi trabajo</h2>
-        {isAdmin && users.length > 0 && (
-          <FilterDropdown
-            placeholder="Selecciona responsable"
-            allowClear={false}
-            value={selectedUserId}
-            onChange={(v) => {
-              setSelectedUserId(v);
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="shrink-0 text-sm font-semibold">Mi trabajo</h2>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <SegmentedControl
+            options={QUICK_FILTERS}
+            value={filter}
+            onChange={(id) => {
+              setFilter(id);
               setPage(1);
             }}
-            options={users.map((u) => ({ value: u.id, label: u.name }))}
           />
-        )}
-      </div>
-
-      <div className="mb-4">
-        <SegmentedControl
-          options={QUICK_FILTERS}
-          value={filter}
-          onChange={(id) => {
-            setFilter(id);
-            setPage(1);
-          }}
-        />
+          {isAdmin && users.length > 0 && (
+            <FilterDropdown
+              placeholder="Selecciona responsable"
+              allowClear={false}
+              value={selectedUserId}
+              onChange={(v) => {
+                setSelectedUserId(v);
+                setPage(1);
+              }}
+              options={users.map((u) => ({ value: u.id, label: u.name }))}
+            />
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -134,6 +136,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
           {pageItems.map((task) => (
             <div key={task.id} className="flex items-center gap-3 py-2.5">
               <DueDot color={dueSemaphore(task.end_date)} />
+              <PendingNoteDot pending={task.hasPendingNote} />
               <span className="min-w-0 flex-1 truncate text-sm">{task.title}</span>
               <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                 {new Date(task.end_date + "T00:00:00").toLocaleDateString("es-CO")}
