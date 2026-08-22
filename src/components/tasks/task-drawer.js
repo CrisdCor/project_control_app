@@ -20,7 +20,7 @@ function daysSince(dateStr) {
   return Math.max(0, Math.round((today - start) / 86400000));
 }
 
-export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
+export function TaskDrawer({ open, onClose, taskId, projectId, initialTitle, onSaved }) {
   const isCreate = !taskId;
 
   const [loading, setLoading] = useState(true);
@@ -97,7 +97,7 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
         markTaskNotesRead(supabase, taskId, user.id);
       }
     } else {
-      setTitle("");
+      setTitle(initialTitle ?? "");
       setStartDate(todayISO());
       setEndDate("");
       setAssigneeIds([]);
@@ -174,7 +174,7 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
       .insert(assigneeIds.map((userId) => ({ task_id: created.id, user_id: userId })));
 
     setSaving(false);
-    onSaved?.();
+    onSaved?.(created);
     onClose();
   }
 

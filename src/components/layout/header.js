@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TITLES = [
   { match: "/overview", label: "Resumen" },
   { match: "/proyectos", label: "Proyectos" },
+  { match: "/reuniones", label: "Reuniones" },
   { match: "/mi-trabajo", label: "Mi trabajo" },
   { match: "/usuarios", label: "Usuarios" },
   { match: "/cuaderno", label: "Cuaderno" },

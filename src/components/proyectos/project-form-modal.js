@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -9,13 +9,18 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function ProjectFormModal({ open, onClose, leaders, onCreated, currentUserId }) {
+export function ProjectFormModal({ open, onClose, leaders, onCreated, currentUserId, initialName }) {
   const [name, setName] = useState("");
   const [leaderId, setLeaderId] = useState("");
   const [startDate, setStartDate] = useState(todayISO());
   const [endDate, setEndDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (open) setName(initialName ?? "");
+  }, [open, initialName]);
 
   function reset() {
     setName("");
@@ -40,13 +45,17 @@ export function ProjectFormModal({ open, onClose, leaders, onCreated, currentUse
 
     setSaving(true);
     const supabase = createClient();
-    const { error: insertError } = await supabase.from("projects").insert({
-      name: name.trim(),
-      leader_id: leaderId,
-      start_date: startDate,
-      end_date: endDate,
-      created_by: currentUserId,
-    });
+    const { data: created, error: insertError } = await supabase
+      .from("projects")
+      .insert({
+        name: name.trim(),
+        leader_id: leaderId,
+        start_date: startDate,
+        end_date: endDate,
+        created_by: currentUserId,
+      })
+      .select()
+      .single();
     setSaving(false);
 
     if (insertError) {
@@ -55,7 +64,7 @@ export function ProjectFormModal({ open, onClose, leaders, onCreated, currentUse
     }
 
     reset();
-    onCreated();
+    onCreated(created);
     onClose();
   }
 

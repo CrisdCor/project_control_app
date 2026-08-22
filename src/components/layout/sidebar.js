@@ -13,6 +13,7 @@ import {
   CheckSquareIcon,
   UsersIcon,
   NotebookIcon,
+  CalendarIcon,
 } from "@/components/icons";
 
 const SECTIONS = [
@@ -29,6 +30,7 @@ const SECTIONS = [
     label: "Gestión",
     items: [
       { href: "/proyectos", label: "Proyectos", icon: FolderIcon },
+      { href: "/reuniones", label: "Reuniones", icon: CalendarIcon },
       { href: "/usuarios", label: "Usuarios", icon: UsersIcon, adminOnly: true },
     ],
   },
