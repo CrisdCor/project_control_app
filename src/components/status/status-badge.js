@@ -1,3 +1,5 @@
+import { ChatBubbleIcon } from "@/components/icons";
+
 export function StatusBadge({ status, map }) {
   const entry = map[status] ?? { label: status, color: "var(--color-muted)" };
   return (
@@ -19,8 +21,10 @@ export function PendingNoteDot({ pending }) {
   if (!pending) return null;
   return (
     <span
-      className="inline-block h-2 w-2 shrink-0 rounded-full bg-status-attention"
       title="Tienes una nota sin leer en esta tarea"
-    />
+      className="inline-flex shrink-0 text-status-attention"
+    >
+      <ChatBubbleIcon className="animate-pulse-soft" />
+    </span>
   );
 }
