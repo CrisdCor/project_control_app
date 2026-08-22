@@ -6,6 +6,7 @@ import { MultiSelectUsers } from "@/components/tasks/multi-select-users";
 import { ChecklistSection } from "@/components/tasks/checklist-section";
 import { StatusBadge } from "@/components/status/status-badge";
 import { TASK_STATUS } from "@/lib/status";
+import { DatePicker } from "@/components/ui/date-picker";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -122,7 +123,7 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
   const canEditCore = isAdmin || isAssignee;
   const canEditTitle = isAdmin;
   const canEditAssignees = isAdmin;
-  const canCreateChecklist = isAdmin || isLeader;
+  const canPostNotes = isAdmin || isLeader || isAssignee;
 
   async function reloadAndNotify() {
     await load();
@@ -309,26 +310,22 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
                 <div className="flex gap-3">
                   <div className="flex flex-1 flex-col gap-1.5">
                     <label className="text-sm font-medium">Fecha inicial</label>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={startDate}
                       min={project?.start_date}
                       max={project?.end_date}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={setStartDate}
                       disabled={!isCreate && !canEditCore}
-                      className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
                     />
                   </div>
                   <div className="flex flex-1 flex-col gap-1.5">
                     <label className="text-sm font-medium">Fecha final</label>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={endDate}
                       min={project?.start_date}
                       max={project?.end_date}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={setEndDate}
                       disabled={!isCreate && !canEditCore}
-                      className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
                     />
                   </div>
                 </div>
@@ -371,11 +368,9 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
                           placeholder="Nombre de la persona externa"
                           className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
                         />
-                        <input
-                          type="date"
+                        <DatePicker
                           value={standbyStartDate}
-                          onChange={(e) => setStandbyStartDate(e.target.value)}
-                          className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+                          onChange={setStandbyStartDate}
                         />
                         <button
                           onClick={setStandby}
@@ -448,12 +443,12 @@ export function TaskDrawer({ open, onClose, taskId, projectId, onSaved }) {
 
               {!isCreate && (
                 <div className="rounded-md border border-border p-4">
-                  <h3 className="mb-3 text-sm font-semibold">Lista de chequeo</h3>
+                  <h3 className="mb-3 text-sm font-semibold">Notas de la tarea</h3>
                   <ChecklistSection
                     taskId={taskId}
                     items={checklist}
                     profiles={profiles}
-                    canCreate={canCreateChecklist}
+                    canPost={canPostNotes}
                     currentUserId={currentUser?.id}
                     isAdmin={isAdmin}
                     onChanged={reloadAndNotify}

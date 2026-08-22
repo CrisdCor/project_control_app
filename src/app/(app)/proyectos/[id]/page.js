@@ -8,6 +8,7 @@ import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { PROJECT_STATUS, TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { PlusIcon } from "@/components/icons";
+import { DatePicker } from "@/components/ui/date-picker";
 
 export default function ProyectoDetallePage() {
   const { id } = useParams();
@@ -152,23 +153,11 @@ export default function ProyectoDetallePage() {
         <div className="flex gap-3">
           <div className="flex flex-1 flex-col gap-1.5">
             <label className="text-sm font-medium">Fecha inicio</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              disabled={!isAdmin}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
-            />
+            <DatePicker value={startDate} onChange={setStartDate} disabled={!isAdmin} />
           </div>
           <div className="flex flex-1 flex-col gap-1.5">
             <label className="text-sm font-medium">Fecha final</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              disabled={!isAdmin}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
-            />
+            <DatePicker value={endDate} min={startDate} onChange={setEndDate} disabled={!isAdmin} />
           </div>
         </div>
 

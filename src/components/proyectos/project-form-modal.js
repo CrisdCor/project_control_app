@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
+import { DatePicker } from "@/components/ui/date-picker";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -91,25 +92,11 @@ export function ProjectFormModal({ open, onClose, leaders, onCreated, currentUse
         <div className="flex gap-3">
           <div className="flex flex-1 flex-col gap-1.5">
             <label className="text-sm font-medium">Fecha inicio</label>
-            <input
-              required
-              type="date"
-              min={todayISO()}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
+            <DatePicker value={startDate} min={todayISO()} onChange={setStartDate} />
           </div>
           <div className="flex flex-1 flex-col gap-1.5">
             <label className="text-sm font-medium">Fecha final</label>
-            <input
-              required
-              type="date"
-              min={startDate}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
+            <DatePicker value={endDate} min={startDate} onChange={setEndDate} />
           </div>
         </div>
 

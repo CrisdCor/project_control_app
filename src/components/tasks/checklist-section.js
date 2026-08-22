@@ -3,42 +3,24 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function ChecklistSection({ taskId, items, profiles, canCreate, currentUserId, isAdmin, onChanged }) {
-  const [note, setNote] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [responseDrafts, setResponseDrafts] = useState({});
+export function ChecklistSection({ taskId, items, profiles, canPost, currentUserId, isAdmin, onChanged }) {
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
 
   const profileName = (id) => profiles.find((p) => p.id === id)?.name ?? "—";
 
-  async function handleAdd(e) {
+  async function handleSend(e) {
     e.preventDefault();
-    if (!note.trim()) return;
-    setAdding(true);
+    if (!message.trim()) return;
+    setSending(true);
     const supabase = createClient();
     await supabase.from("task_checklist").insert({
       task_id: taskId,
       created_by: currentUserId,
-      assigned_to: assignedTo || null,
-      note: note.trim(),
+      note: message.trim(),
     });
-    setNote("");
-    setAssignedTo("");
-    setAdding(false);
-    onChanged();
-  }
-
-  async function toggleDone(item) {
-    const supabase = createClient();
-    await supabase.from("task_checklist").update({ is_done: !item.is_done }).eq("id", item.id);
-    onChanged();
-  }
-
-  async function saveResponse(item) {
-    const draft = responseDrafts[item.id];
-    if (draft === undefined) return;
-    const supabase = createClient();
-    await supabase.from("task_checklist").update({ response: draft }).eq("id", item.id);
+    setMessage("");
+    setSending(false);
     onChanged();
   }
 
@@ -48,90 +30,66 @@ export function ChecklistSection({ taskId, items, profiles, canCreate, currentUs
     onChanged();
   }
 
+  const sorted = [...items].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
   return (
     <div className="flex flex-col gap-3">
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sin observaciones todavía.</p>
+      {sorted.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Aún no hay notas en esta tarea.</p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {items.map((item) => {
+        <div className="flex flex-col gap-2.5">
+          {sorted.map((item) => {
             const canDelete = isAdmin || item.created_by === currentUserId;
+            const isMine = item.created_by === currentUserId;
             return (
-              <div key={item.id} className="rounded-md border border-border p-3">
-                <div className="mb-1.5 flex items-start justify-between gap-2">
-                  <p className="text-sm">{item.note}</p>
-                  <input
-                    type="checkbox"
-                    checked={item.is_done}
-                    onChange={() => toggleDone(item)}
-                    className="mt-0.5 shrink-0 accent-black"
-                    title="Marcar como ejecutada"
-                  />
+              <div
+                key={item.id}
+                className={`max-w-[88%] rounded-lg border border-border p-3 ${
+                  isMine ? "self-end bg-neutral-50" : "self-start bg-white"
+                }`}
+              >
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium">{profileName(item.created_by)}</span>
+                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                    {new Date(item.created_at).toLocaleString("es-CO", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </div>
-                <p className="mb-2 text-xs text-muted-foreground">
-                  {profileName(item.created_by)}
-                  {item.assigned_to ? ` → ${profileName(item.assigned_to)}` : ""}
-                </p>
-                <div className="flex gap-1.5">
-                  <input
-                    value={responseDrafts[item.id] ?? item.response ?? ""}
-                    onChange={(e) =>
-                      setResponseDrafts((prev) => ({ ...prev, [item.id]: e.target.value }))
-                    }
-                    placeholder="Respuesta..."
-                    className="flex-1 rounded-md border border-border bg-white px-2.5 py-1.5 text-xs outline-none focus:border-foreground"
-                  />
+                <p className="whitespace-pre-wrap text-sm">{item.note}</p>
+                {canDelete && (
                   <button
-                    onClick={() => saveResponse(item)}
-                    className="rounded-md border border-border px-2.5 py-1.5 text-xs transition hover:bg-neutral-50"
+                    onClick={() => handleDelete(item)}
+                    className="mt-1.5 text-[11px] text-muted-foreground transition hover:text-status-overdue"
                   >
-                    Guardar
+                    Eliminar
                   </button>
-                  {canDelete && (
-                    <button
-                      onClick={() => handleDelete(item)}
-                      className="rounded-md border border-status-overdue/40 px-2.5 py-1.5 text-xs text-status-overdue transition hover:bg-red-50"
-                    >
-                      Eliminar
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             );
           })}
         </div>
       )}
 
-      {canCreate && (
-        <form onSubmit={handleAdd} className="flex flex-col gap-2 border-t border-border pt-3">
+      {canPost && (
+        <form onSubmit={handleSend} className="flex flex-col gap-2 border-t border-border pt-3">
           <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Nueva observación o asignación..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Escribe una nota para el responsable o el líder..."
             rows={2}
             className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
           />
-          <div className="flex gap-2">
-            <select
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
-              className="flex-1 rounded-md border border-border bg-white px-2.5 py-1.5 text-xs outline-none"
-            >
-              <option value="">Dirigida a (opcional)</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              disabled={adding}
-              className="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
-            >
-              Agregar
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={sending || !message.trim()}
+            className="self-end rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
+          >
+            Enviar
+          </button>
         </form>
       )}
     </div>
