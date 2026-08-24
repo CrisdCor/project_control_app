@@ -17,7 +17,7 @@ const QUICK_FILTERS = [
   { id: "vencidas", label: "Vencidas" },
   { id: "hoy", label: "Hoy" },
   { id: "manana", label: "Mañana" },
-  { id: "7dias", label: "Próximos 7 días" },
+  { id: "7dias", label: "7 días" },
 ];
 
 export default function MiTrabajoPage() {

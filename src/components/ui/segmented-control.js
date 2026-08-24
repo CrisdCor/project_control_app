@@ -29,7 +29,7 @@ export function SegmentedControl({ options, value, onChange }) {
           }}
           type="button"
           onClick={() => onChange(opt.id)}
-          className={`relative z-10 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${
+          className={`relative z-10 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-200 ${
             value === opt.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >

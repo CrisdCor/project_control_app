@@ -34,7 +34,7 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-md border border-border bg-white px-3 py-2 text-sm transition hover:bg-neutral-50"
+        className="flex items-center gap-2 rounded-md border border-border bg-white px-2.5 py-1.5 text-sm transition hover:bg-neutral-50"
       >
         <span className={selected ? "text-foreground" : "text-muted-foreground"}>
           {selected ? selected.label : placeholder}
