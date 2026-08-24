@@ -8,10 +8,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { ProjectFormModal } from "@/components/proyectos/project-form-modal";
+import { TrashIcon } from "@/components/icons";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
+
+const EXTERNAL_PREFIX = "ext:";
 
 const CONVERTED_LABEL = {
   task: "Convertida en tarea",
@@ -31,9 +34,11 @@ export default function ReunionDetallePage() {
   const [profiles, setProfiles] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingMeeting, setDeletingMeeting] = useState(false);
+  const [confirmDeleteMeeting, setConfirmDeleteMeeting] = useState(false);
 
   const [description, setDescription] = useState("");
-  const [suggestedResponsible, setSuggestedResponsible] = useState("");
+  const [suggestedValue, setSuggestedValue] = useState(""); // "" | profileId | "ext:Nombre"
   const [suggestedDueDate, setSuggestedDueDate] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -87,20 +92,31 @@ export default function ReunionDetallePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  const responsibleOptions = [
+    ...profiles.map((p) => ({ value: p.id, label: p.name })),
+    ...(meeting?.external_participants ?? []).map((name) => ({
+      value: `${EXTERNAL_PREFIX}${name}`,
+      label: `${name} (externo)`,
+    })),
+  ];
+
   async function handleAddItem(e) {
     e.preventDefault();
     if (!description.trim()) return;
     setAdding(true);
+
+    const isExternal = suggestedValue.startsWith(EXTERNAL_PREFIX);
     const supabase = createClient();
     await supabase.from("meeting_action_items").insert({
       meeting_id: id,
       description: description.trim(),
-      suggested_responsible: suggestedResponsible || null,
+      suggested_responsible: !isExternal && suggestedValue ? suggestedValue : null,
+      suggested_responsible_external: isExternal ? suggestedValue.slice(EXTERNAL_PREFIX.length) : null,
       suggested_due_date: suggestedDueDate || null,
       created_by: currentUserId,
     });
     setDescription("");
-    setSuggestedResponsible("");
+    setSuggestedValue("");
     setSuggestedDueDate("");
     setAdding(false);
     load();
@@ -112,17 +128,43 @@ export default function ReunionDetallePage() {
     load();
   }
 
-  async function handleConvertAgenda(item) {
+  async function handleDeleteMeeting() {
+    setDeletingMeeting(true);
     const supabase = createClient();
-    const { data: agendaItem } = await supabase
+    await supabase.from("meetings").delete().eq("id", id);
+    router.push("/reuniones");
+  }
+
+  function agendaTargetUserId(item) {
+    if (item.suggested_responsible_external) return null; // no tiene agenda
+    if (item.suggested_responsible) return item.suggested_responsible;
+    return currentUserId; // sin sugerencia: se envía a la agenda de quien convierte
+  }
+
+  function canConvertToAgenda(item) {
+    const target = agendaTargetUserId(item);
+    if (!target) return false;
+    if (target === currentUserId) return true;
+    return isAdmin; // enviar a la agenda de otro usuario: solo admin
+  }
+
+  async function handleConvertAgenda(item) {
+    const targetUserId = agendaTargetUserId(item);
+    if (!targetUserId) return;
+
+    const supabase = createClient();
+    const { data: agendaItem, error } = await supabase
       .from("agenda_items")
       .insert({
-        user_id: currentUserId,
+        user_id: targetUserId,
         text: item.description,
         due_date: item.suggested_due_date || todayISO(),
+        source_meeting_id: id,
       })
       .select()
       .single();
+
+    if (error) return;
 
     await supabase
       .from("meeting_action_items")
@@ -151,17 +193,49 @@ export default function ReunionDetallePage() {
     load();
   }
 
-  const profileName = (pid) => profiles.find((p) => p.id === pid)?.name ?? "—";
+  function responsibleLabel(item) {
+    if (item.suggested_responsible_external) return `${item.suggested_responsible_external} (externo)`;
+    if (item.suggested_responsible) return profiles.find((p) => p.id === item.suggested_responsible)?.name ?? "—";
+    return null;
+  }
 
   if (loading) return <p className="text-sm text-muted-foreground">Cargando...</p>;
   if (!meeting) return <p className="text-sm text-muted-foreground">No se encontró la reunión.</p>;
 
+  const canDeleteMeeting = isAdmin || meeting.created_by === currentUserId;
+
   return (
     <div className="flex max-w-2xl flex-col gap-6">
-      <div>
+      <div className="flex items-center justify-between">
         <Link href="/reuniones" className="text-sm text-muted-foreground hover:underline">
           ← Reuniones
         </Link>
+        {canDeleteMeeting &&
+          (confirmDeleteMeeting ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDeleteMeeting}
+                disabled={deletingMeeting}
+                className="rounded-md bg-status-overdue px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+              >
+                {deletingMeeting ? "Eliminando..." : "Confirmar"}
+              </button>
+              <button
+                onClick={() => setConfirmDeleteMeeting(false)}
+                className="rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-neutral-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDeleteMeeting(true)}
+              className="flex items-center gap-1.5 rounded-md border border-status-overdue/40 px-2.5 py-1.5 text-xs text-status-overdue transition hover:bg-red-50"
+            >
+              <TrashIcon />
+              Eliminar reunión
+            </button>
+          ))}
       </div>
 
       <div className="rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-sm">
@@ -174,8 +248,10 @@ export default function ReunionDetallePage() {
           })}
           {projectName && <> · Proyecto: {projectName}</>}
         </p>
-        {participantNames.length > 0 && (
-          <p className="mt-2 text-sm text-muted-foreground">Participantes: {participantNames.join(", ")}</p>
+        {(participantNames.length > 0 || meeting.external_participants?.length > 0) && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Participantes: {[...participantNames, ...(meeting.external_participants ?? []).map((n) => `${n} (externo)`)].join(", ")}
+          </p>
         )}
       </div>
 
@@ -188,11 +264,19 @@ export default function ReunionDetallePage() {
           <div className="mb-5 flex flex-col gap-3">
             {items.map((item) => {
               const canDelete = isAdmin || item.created_by === currentUserId;
+              const responsible = responsibleLabel(item);
+              const agendaAllowed = canConvertToAgenda(item);
+              const agendaTarget = agendaTargetUserId(item);
+              const agendaLabel =
+                agendaTarget && agendaTarget !== currentUserId
+                  ? `Enviar a la agenda de ${responsible ?? ""}`
+                  : "Enviar a mi agenda";
+
               return (
                 <div key={item.id} className="rounded-md border border-border p-3">
                   <p className="text-sm">{item.description}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {item.suggested_responsible && <>Sugerido: {profileName(item.suggested_responsible)} · </>}
+                    {responsible && <>Sugerido: {responsible} · </>}
                     {item.suggested_due_date &&
                       new Date(item.suggested_due_date + "T00:00:00").toLocaleDateString("es-CO")}
                   </p>
@@ -202,7 +286,7 @@ export default function ReunionDetallePage() {
                       {CONVERTED_LABEL[item.converted_to]}
                     </p>
                   ) : (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       {isAdmin && (
                         <button
                           onClick={() => setTaskDrawerItem(item)}
@@ -227,9 +311,17 @@ export default function ReunionDetallePage() {
                       )}
                       <button
                         onClick={() => handleConvertAgenda(item)}
-                        className="rounded-md border border-border px-2.5 py-1 text-xs transition hover:bg-neutral-50"
+                        disabled={!agendaAllowed}
+                        title={
+                          item.suggested_responsible_external
+                            ? "Esta persona no tiene agenda en la aplicación"
+                            : !agendaAllowed
+                            ? "Solo el responsable o el administrador pueden enviarlo a esa agenda"
+                            : undefined
+                        }
+                        className="rounded-md border border-border px-2.5 py-1 text-xs transition hover:bg-neutral-50 disabled:opacity-40"
                       >
-                        Enviar a mi agenda
+                        {agendaLabel}
                       </button>
                       {canDelete && (
                         <button
@@ -259,9 +351,9 @@ export default function ReunionDetallePage() {
             <div className="min-w-[180px] flex-1">
               <FilterDropdown
                 placeholder="Responsable sugerido"
-                value={suggestedResponsible}
-                onChange={setSuggestedResponsible}
-                options={profiles.map((p) => ({ value: p.id, label: p.name }))}
+                value={suggestedValue}
+                onChange={setSuggestedValue}
+                options={responsibleOptions}
               />
             </div>
             <DatePicker

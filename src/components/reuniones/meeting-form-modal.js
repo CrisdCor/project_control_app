@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
+import { PlusIcon } from "@/components/icons";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -16,6 +17,8 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
   const [meetingDate, setMeetingDate] = useState(todayISO());
   const [projectId, setProjectId] = useState("");
   const [participantIds, setParticipantIds] = useState([]);
+  const [externalName, setExternalName] = useState("");
+  const [externalParticipants, setExternalParticipants] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -24,7 +27,20 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
     setMeetingDate(todayISO());
     setProjectId("");
     setParticipantIds([]);
+    setExternalName("");
+    setExternalParticipants([]);
     setError(null);
+  }
+
+  function addExternal() {
+    const name = externalName.trim();
+    if (!name || externalParticipants.includes(name)) return;
+    setExternalParticipants((prev) => [...prev, name]);
+    setExternalName("");
+  }
+
+  function removeExternal(name) {
+    setExternalParticipants((prev) => prev.filter((n) => n !== name));
   }
 
   async function handleSubmit(e) {
@@ -44,6 +60,7 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
         title: title.trim(),
         meeting_date: meetingDate,
         project_id: projectId || null,
+        external_participants: externalParticipants,
         created_by: currentUserId,
       })
       .select()
@@ -71,7 +88,7 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
     <Modal open={open} onClose={onClose} title="Nueva reunión">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Título</label>
+          <label className="text-sm font-medium">Nombre de la reunión</label>
           <input
             required
             value={title}
@@ -96,13 +113,58 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Participantes</label>
+          <label className="text-sm font-medium">Participantes de la aplicación</label>
           <MultiSelectDropdown
             options={profiles.map((p) => ({ id: p.id, name: p.name }))}
             selectedIds={participantIds}
             onChange={setParticipantIds}
             placeholder="Selecciona participantes..."
           />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Participantes externos (opcional)</label>
+          <div className="flex gap-2">
+            <input
+              value={externalName}
+              onChange={(e) => setExternalName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addExternal();
+                }
+              }}
+              placeholder="Nombre de la persona..."
+              className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+            />
+            <button
+              type="button"
+              onClick={addExternal}
+              className="flex items-center gap-1 rounded-md border border-border px-3 py-2 text-xs font-medium transition hover:bg-neutral-50"
+            >
+              <PlusIcon />
+              Agregar
+            </button>
+          </div>
+          {externalParticipants.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {externalParticipants.map((name) => (
+                <span
+                  key={name}
+                  className="flex items-center gap-1.5 rounded-full border border-border bg-neutral-50 px-2.5 py-1 text-xs"
+                >
+                  {name}
+                  <button
+                    type="button"
+                    onClick={() => removeExternal(name)}
+                    className="text-muted-foreground hover:text-status-overdue"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {error && <p className="text-sm text-status-overdue">{error}</p>}
@@ -118,3 +180,4 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
     </Modal>
   );
 }
+

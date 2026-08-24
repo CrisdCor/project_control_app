@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Pagination } from "@/components/ui/pagination";
 import { DatePicker } from "@/components/ui/date-picker";
 import { agendaSemaphore } from "@/lib/status";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, CalendarIcon } from "@/components/icons";
 
 const PAGE_SIZE = 10;
 
@@ -159,12 +159,17 @@ export function AgendaPanel({ userId }) {
               ) : (
                 <button
                   onDoubleClick={() => startEdit(item)}
-                  className={`min-w-0 flex-1 truncate text-left text-sm ${
+                  className={`flex min-w-0 flex-1 items-center gap-1.5 truncate text-left text-sm ${
                     item.done ? "text-muted-foreground line-through" : ""
                   }`}
                   title="Doble clic para editar"
                 >
-                  {item.text}
+                  {item.source_meeting_id && (
+                    <span title="Proviene de una reunión" className="shrink-0 text-accent">
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                  <span className="truncate">{item.text}</span>
                 </button>
               )}
 

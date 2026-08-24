@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MeetingFormModal } from "@/components/reuniones/meeting-form-modal";
-import { PlusIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon } from "@/components/icons";
 
 export default function ReunionesPage() {
   const router = useRouter();
@@ -16,6 +16,8 @@ export default function ReunionesPage() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   async function load() {
     const supabase = createClient();
@@ -25,6 +27,10 @@ export default function ReunionesPage() {
       data: { user },
     } = await supabase.auth.getUser();
     setCurrentUserId(user?.id ?? null);
+    if (user) {
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+      setIsAdmin(profile?.role === "admin");
+    }
 
     const { data } = await supabase
       .from("meetings")
@@ -54,6 +60,14 @@ export default function ReunionesPage() {
     })();
   }, []);
 
+  async function handleDelete(meeting) {
+    setDeletingId(meeting.id);
+    const supabase = createClient();
+    await supabase.from("meetings").delete().eq("id", meeting.id);
+    setDeletingId(null);
+    load();
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
@@ -81,6 +95,7 @@ export default function ReunionesPage() {
                 <th className="px-5 py-3 font-medium">Título</th>
                 <th className="px-5 py-3 font-medium">Fecha</th>
                 <th className="px-5 py-3 font-medium">Proyecto</th>
+                <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -96,6 +111,18 @@ export default function ReunionesPage() {
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">
                     {m.project_id ? projectNames[m.project_id] ?? "—" : "—"}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    {(isAdmin || m.created_by === currentUserId) && (
+                      <button
+                        onClick={() => handleDelete(m)}
+                        disabled={deletingId === m.id}
+                        className="rounded-md border border-status-overdue/40 px-2.5 py-1 text-xs text-status-overdue transition hover:bg-red-50 disabled:opacity-50"
+                        title="Eliminar reunión"
+                      >
+                        <TrashIcon />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
