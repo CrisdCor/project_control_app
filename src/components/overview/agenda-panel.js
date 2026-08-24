@@ -27,11 +27,18 @@ export function AgendaPanel({ userId }) {
   async function load() {
     const supabase = createClient();
     setLoading(true);
+
+    // depuración real: las tareas ya finalizadas hace más de 2 días se eliminan
+    // físicamente (no solo se ocultan), para no acumular filas indefinidamente
     const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString();
-    const { data } = await supabase
+    await supabase
       .from("agenda_items")
-      .select("*")
-      .or(`done.eq.false,done_at.gt.${twoDaysAgo}`);
+      .delete()
+      .eq("user_id", userId)
+      .eq("done", true)
+      .lt("done_at", twoDaysAgo);
+
+    const { data } = await supabase.from("agenda_items").select("*");
     setItems(data ?? []);
     setLoading(false);
   }
@@ -40,6 +47,7 @@ export function AgendaPanel({ userId }) {
     (async () => {
       await load();
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const sorted = useMemo(() => {

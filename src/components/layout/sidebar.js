@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
+  ChevronLeftIcon,
   HomeIcon,
   FolderIcon,
   CheckSquareIcon,
@@ -45,10 +46,22 @@ export function Sidebar({ profile }) {
   const pathname = usePathname();
   const router = useRouter();
   const [openSections, setOpenSections] = useState(() =>
-    Object.fromEntries(SECTIONS.map((s) => [s.id, true]))
+    Object.fromEntries(SECTIONS.map((s) => [s.id, false]))
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const [hasUnseenMeetingTasks, setHasUnseenMeetingTasks] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("sidebar-collapsed") === "1";
+  });
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
+      return next;
+    });
+  }
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -89,6 +102,23 @@ export function Sidebar({ profile }) {
   }
 
   const isAdmin = profile?.role === "admin";
+
+  if (collapsed) {
+    return (
+      <aside className="flex w-11 shrink-0 flex-col items-center border-r border-border bg-surface py-3">
+        <button
+          onClick={toggleCollapsed}
+          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
+          title="Mostrar menú"
+        >
+          <ChevronRightIcon />
+        </button>
+        {hasUnseenMeetingTasks && (
+          <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-status-attention" title="Tienes notificaciones" />
+        )}
+      </aside>
+    );
+  }
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-surface">
@@ -183,6 +213,17 @@ export function Sidebar({ profile }) {
           </div>
         ))}
       </nav>
+
+      {/* Footer */}
+      <div className="border-t border-border p-3">
+        <button
+          onClick={toggleCollapsed}
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
+        >
+          <ChevronLeftIcon className="shrink-0" />
+          Ocultar menú
+        </button>
+      </div>
     </aside>
   );
 }

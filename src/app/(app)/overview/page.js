@@ -31,7 +31,7 @@ export default function OverviewPage() {
   if (!user) return null;
 
   return (
-    <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+    <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-h-0 flex-col gap-4">
         <div className="min-h-0 flex-1">
           <ProjectsPanel isAdmin={isAdmin} currentUserId={user.id} />
