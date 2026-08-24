@@ -102,8 +102,8 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
   }
 
   return (
-    <section className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">Proyectos</h2>
         {isAdmin && Object.keys(leaders).length > 0 && (
           <FilterDropdown
@@ -123,7 +123,7 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
       ) : pageItems.length === 0 ? (
         <p className="text-sm text-muted-foreground">No hay proyectos para mostrar.</p>
       ) : (
-        <div className="flex flex-col divide-y divide-border">
+        <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
           {pageItems.map((project) => (
             <div key={project.id}>
               <button
@@ -155,7 +155,9 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
         </div>
       )}
 
-      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      <div className="shrink-0">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
 
       <TaskDrawer
         open={Boolean(drawerTask)}

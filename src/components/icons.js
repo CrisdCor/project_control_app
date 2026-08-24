@@ -32,6 +32,15 @@ export function CalendarIcon({ className = "" }) {
   );
 }
 
+export function PencilIcon({ className = "" }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 20l.9-4.2L15.3 5.4a1.5 1.5 0 0 1 2.1 0l1.2 1.2a1.5 1.5 0 0 1 0 2.1L8.2 19.1 4 20Z" />
+      <path d="M13.5 7.2l3.3 3.3" />
+    </svg>
+  );
+}
+
 export function HomeIcon({ className = "" }) {
   return (
     <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

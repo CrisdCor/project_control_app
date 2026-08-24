@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,6 +48,34 @@ export function Sidebar({ profile }) {
     Object.fromEntries(SECTIONS.map((s) => [s.id, true]))
   );
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hasUnseenMeetingTasks, setHasUnseenMeetingTasks] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    const supabase = createClient();
+    supabase
+      .from("agenda_items")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", profile.id)
+      .not("source_meeting_id", "is", null)
+      .is("seen_at", null)
+      .then(({ count }) => setHasUnseenMeetingTasks((count ?? 0) > 0));
+  }, [profile?.id]);
+
+  async function handleOpenMenu() {
+    const next = !menuOpen;
+    setMenuOpen(next);
+    if (next && hasUnseenMeetingTasks && profile?.id) {
+      const supabase = createClient();
+      await supabase
+        .from("agenda_items")
+        .update({ seen_at: new Date().toISOString() })
+        .eq("user_id", profile.id)
+        .not("source_meeting_id", "is", null)
+        .is("seen_at", null);
+      setHasUnseenMeetingTasks(false);
+    }
+  }
 
   function toggleSection(id) {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -67,7 +95,7 @@ export function Sidebar({ profile }) {
       {/* Usuario */}
       <div className="relative border-b border-border p-3">
         <button
-          onClick={() => setMenuOpen((v) => !v)}
+          onClick={handleOpenMenu}
           className="flex w-full items-center gap-2.5 rounded-md p-1.5 text-left transition hover:bg-neutral-50"
         >
           <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-neutral-200">
@@ -77,6 +105,12 @@ export function Sidebar({ profile }) {
               <span className="flex h-full w-full items-center justify-center text-xs font-medium text-neutral-500">
                 {(profile?.name ?? "?").slice(0, 1).toUpperCase()}
               </span>
+            )}
+            {hasUnseenMeetingTasks && (
+              <span
+                className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-status-attention ring-2 ring-white"
+                title="Tienes tareas nuevas asignadas desde una reunión"
+              />
             )}
           </div>
           <div className="min-w-0 flex-1">

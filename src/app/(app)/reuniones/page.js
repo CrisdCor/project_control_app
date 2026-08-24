@@ -10,13 +10,12 @@ import { PlusIcon, TrashIcon } from "@/components/icons";
 export default function ReunionesPage() {
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [meetings, setMeetings] = useState([]);
-  const [projectNames, setProjectNames] = useState({});
+  const [profileNames, setProfileNames] = useState({});
   const [profiles, setProfiles] = useState([]);
-  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
   async function load() {
@@ -39,17 +38,9 @@ export default function ReunionesPage() {
     const list = data ?? [];
     setMeetings(list);
 
-    const projectIds = [...new Set(list.map((m) => m.project_id).filter(Boolean))];
-    if (projectIds.length) {
-      const { data: projs } = await supabase.from("projects").select("id, name").in("id", projectIds);
-      setProjectNames(Object.fromEntries((projs ?? []).map((p) => [p.id, p.name])));
-    }
-
     const { data: profs } = await supabase.from("profiles").select("id, name").order("name");
     setProfiles(profs ?? []);
-
-    const { data: allProjects } = await supabase.from("projects").select("id, name").order("name");
-    setProjects(allProjects ?? []);
+    setProfileNames(Object.fromEntries((profs ?? []).map((p) => [p.id, p.name])));
 
     setLoading(false);
   }
@@ -72,7 +63,7 @@ export default function ReunionesPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Registra reuniones y convierte sus ítems de acción en tareas, proyectos o pendientes de agenda.
+          Registra reuniones y agenda sus tareas directamente en el calendario de cada participante.
         </p>
         <button
           onClick={() => setModalOpen(true)}
@@ -94,7 +85,7 @@ export default function ReunionesPage() {
               <tr className="border-b border-border text-left text-xs text-muted-foreground">
                 <th className="px-5 py-3 font-medium">Título</th>
                 <th className="px-5 py-3 font-medium">Fecha</th>
-                <th className="px-5 py-3 font-medium">Proyecto</th>
+                <th className="px-5 py-3 font-medium">Moderador</th>
                 <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
@@ -110,7 +101,7 @@ export default function ReunionesPage() {
                     {new Date(m.meeting_date + "T00:00:00").toLocaleDateString("es-CO")}
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">
-                    {m.project_id ? projectNames[m.project_id] ?? "—" : "—"}
+                    {m.moderator_id ? profileNames[m.moderator_id] ?? "—" : "—"}
                   </td>
                   <td className="px-5 py-3 text-right">
                     {(isAdmin || m.created_by === currentUserId) && (
@@ -135,7 +126,6 @@ export default function ReunionesPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         profiles={profiles}
-        projects={projects}
         currentUserId={currentUserId}
         onCreated={(created) => router.push(`/reuniones/${created.id}`)}
       />

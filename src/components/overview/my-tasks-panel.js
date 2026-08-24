@@ -125,8 +125,8 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
   const pageItems = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <section className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
+      <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
         <h2 className="shrink-0 text-sm font-semibold">Mi trabajo</h2>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -157,7 +157,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
       ) : pageItems.length === 0 ? (
         <p className="text-sm text-muted-foreground">No hay tareas para este filtro.</p>
       ) : (
-        <div className="flex flex-col divide-y divide-border">
+        <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
           {pageItems.map((task) => (
             <div key={task.id} className="flex items-center gap-3 py-2">
               <DueDot color={dueSemaphore(task.end_date)} />
@@ -185,7 +185,9 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
         </div>
       )}
 
-      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      <div className="shrink-0">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
 
       <TaskDrawer
         open={Boolean(drawerTaskId)}

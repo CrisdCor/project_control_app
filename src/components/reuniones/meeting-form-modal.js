@@ -12,23 +12,31 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function MeetingFormModal({ open, onClose, profiles, projects, currentUserId, onCreated }) {
+export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCreated }) {
   const [title, setTitle] = useState("");
   const [meetingDate, setMeetingDate] = useState(todayISO());
-  const [projectId, setProjectId] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [moderatorId, setModeratorId] = useState(currentUserId ?? "");
   const [participantIds, setParticipantIds] = useState([]);
   const [externalName, setExternalName] = useState("");
   const [externalParticipants, setExternalParticipants] = useState([]);
+  const [checklistDraft, setChecklistDraft] = useState("");
+  const [checklistItems, setChecklistItems] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   function reset() {
     setTitle("");
     setMeetingDate(todayISO());
-    setProjectId("");
+    setStartTime("");
+    setEndTime("");
+    setModeratorId(currentUserId ?? "");
     setParticipantIds([]);
     setExternalName("");
     setExternalParticipants([]);
+    setChecklistDraft("");
+    setChecklistItems([]);
     setError(null);
   }
 
@@ -43,12 +51,27 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
     setExternalParticipants((prev) => prev.filter((n) => n !== name));
   }
 
+  function addChecklistItem() {
+    const text = checklistDraft.trim();
+    if (!text) return;
+    setChecklistItems((prev) => [...prev, text]);
+    setChecklistDraft("");
+  }
+
+  function removeChecklistItem(index) {
+    setChecklistItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
 
     if (!title.trim()) {
-      setError("El título es obligatorio.");
+      setError("El nombre de la reunión es obligatorio.");
+      return;
+    }
+    if (!moderatorId) {
+      setError("Selecciona un moderador.");
       return;
     }
 
@@ -59,7 +82,9 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
       .insert({
         title: title.trim(),
         meeting_date: meetingDate,
-        project_id: projectId || null,
+        start_time: startTime || null,
+        end_time: endTime || null,
+        moderator_id: moderatorId,
         external_participants: externalParticipants,
         created_by: currentUserId,
       })
@@ -72,10 +97,17 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
       return;
     }
 
-    if (participantIds.length) {
+    const allParticipantIds = [...new Set([...participantIds, moderatorId])];
+    if (allParticipantIds.length) {
       await supabase
         .from("meeting_participants")
-        .insert(participantIds.map((userId) => ({ meeting_id: created.id, user_id: userId })));
+        .insert(allParticipantIds.map((userId) => ({ meeting_id: created.id, user_id: userId })));
+    }
+
+    if (checklistItems.length) {
+      await supabase.from("meeting_checklist_items").insert(
+        checklistItems.map((text) => ({ meeting_id: created.id, text, created_by: currentUserId }))
+      );
     }
 
     setSaving(false);
@@ -98,17 +130,39 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Fecha</label>
+          <label className="text-sm font-medium">Fecha de la reunión</label>
           <DatePicker value={meetingDate} onChange={setMeetingDate} />
         </div>
 
+        <div className="flex gap-3">
+          <div className="flex flex-1 flex-col gap-1.5">
+            <label className="text-sm font-medium">Hora inicio</label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+            />
+          </div>
+          <div className="flex flex-1 flex-col gap-1.5">
+            <label className="text-sm font-medium">Hora fin</label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+            />
+          </div>
+        </div>
+
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Proyecto (opcional)</label>
+          <label className="text-sm font-medium">Moderador</label>
           <FilterDropdown
-            placeholder="Sin proyecto asociado"
-            value={projectId}
-            onChange={setProjectId}
-            options={projects.map((p) => ({ value: p.id, label: p.name }))}
+            placeholder="Selecciona un moderador"
+            allowClear={false}
+            value={moderatorId}
+            onChange={setModeratorId}
+            options={profiles.map((p) => ({ value: p.id, label: p.name }))}
           />
         </div>
 
@@ -167,6 +221,51 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
           )}
         </div>
 
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Lista de chequeo (orden del día)</label>
+          <div className="flex gap-2">
+            <input
+              value={checklistDraft}
+              onChange={(e) => setChecklistDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addChecklistItem();
+                }
+              }}
+              placeholder="Punto a tratar en la reunión..."
+              className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+            />
+            <button
+              type="button"
+              onClick={addChecklistItem}
+              className="flex items-center gap-1 rounded-md border border-border px-3 py-2 text-xs font-medium transition hover:bg-neutral-50"
+            >
+              <PlusIcon />
+              Agregar
+            </button>
+          </div>
+          {checklistItems.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {checklistItems.map((text, i) => (
+                <li
+                  key={i}
+                  className="flex items-center justify-between gap-2 rounded-md border border-border bg-neutral-50 px-3 py-1.5 text-sm"
+                >
+                  <span className="min-w-0 flex-1 truncate">{text}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeChecklistItem(i)}
+                    className="shrink-0 text-muted-foreground hover:text-status-overdue"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {error && <p className="text-sm text-status-overdue">{error}</p>}
 
         <button
@@ -180,4 +279,3 @@ export function MeetingFormModal({ open, onClose, profiles, projects, currentUse
     </Modal>
   );
 }
-

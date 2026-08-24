@@ -31,10 +31,14 @@ export default function OverviewPage() {
   if (!user) return null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="flex flex-col gap-4">
-        <ProjectsPanel isAdmin={isAdmin} currentUserId={user.id} />
-        <MyTasksPanel currentUserId={user.id} isAdmin={isAdmin} />
+    <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="flex min-h-0 flex-col gap-4">
+        <div className="min-h-0 flex-1">
+          <ProjectsPanel isAdmin={isAdmin} currentUserId={user.id} />
+        </div>
+        <div className="min-h-0 flex-1">
+          <MyTasksPanel currentUserId={user.id} isAdmin={isAdmin} />
+        </div>
       </div>
       <AgendaPanel userId={user.id} />
     </div>
