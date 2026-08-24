@@ -24,6 +24,7 @@ function formatDisplay(date) {
 
 export function DatePicker({ value, onChange, min, max, placeholder = "Seleccionar fecha", disabled = false }) {
   const [open, setOpen] = useState(false);
+  const [align, setAlign] = useState("left");
   const ref = useRef(null);
   const selected = parseISO(value);
   const minDate = parseISO(min);
@@ -77,8 +78,14 @@ export function DatePicker({ value, onChange, min, max, placeholder = "Seleccion
         type="button"
         disabled={disabled}
         onClick={() => {
+          const opening = !open;
+          if (opening && ref.current) {
+            const rect = ref.current.getBoundingClientRect();
+            const popupWidth = 288; // w-72
+            setAlign(rect.left + popupWidth > window.innerWidth - 8 ? "right" : "left");
+          }
           setViewDate(selected || minDate || new Date());
-          setOpen((v) => !v);
+          setOpen(opening);
         }}
         className="flex w-full items-center gap-2 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none transition focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
       >
@@ -89,7 +96,11 @@ export function DatePicker({ value, onChange, min, max, placeholder = "Seleccion
       </button>
 
       {open && !disabled && (
-        <div className="absolute left-0 top-full z-30 mt-1.5 w-72 animate-fade-in rounded-xl border border-border bg-white p-3 shadow-lg">
+        <div
+          className={`absolute top-full z-30 mt-1.5 w-72 animate-fade-in rounded-xl border border-border bg-white p-3 shadow-lg ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+        >
           <div className="mb-2 flex items-center justify-between px-1">
             <button
               type="button"

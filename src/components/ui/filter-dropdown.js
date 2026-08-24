@@ -5,6 +5,7 @@ import { ChevronDownIcon, CheckIcon } from "@/components/icons";
 
 export function FilterDropdown({ placeholder, value, options, onChange, allowClear = true }) {
   const [open, setOpen] = useState(false);
+  const [align, setAlign] = useState("left");
   const ref = useRef(null);
 
   useEffect(() => {
@@ -33,7 +34,14 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          const opening = !open;
+          if (opening && ref.current) {
+            const rect = ref.current.getBoundingClientRect();
+            setAlign(rect.left + 224 > window.innerWidth - 8 ? "right" : "left");
+          }
+          setOpen(opening);
+        }}
         className="flex items-center gap-2 rounded-md border border-border bg-white px-2.5 py-1.5 text-sm transition hover:bg-neutral-50"
       >
         <span className={selected ? "text-foreground" : "text-muted-foreground"}>
@@ -43,7 +51,11 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-1.5 w-56 animate-fade-in overflow-hidden rounded-xl border border-border bg-white py-1.5 shadow-lg">
+        <div
+          className={`absolute top-full z-20 mt-1.5 w-56 animate-fade-in overflow-hidden rounded-xl border border-border bg-white py-1.5 shadow-lg ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+        >
           {allowClear && (
             <>
               <button

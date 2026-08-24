@@ -5,6 +5,7 @@ import { ChevronDownIcon, CheckIcon } from "@/components/icons";
 
 export function MultiSelectDropdown({ options, selectedIds, onChange, placeholder = "Seleccionar...", disabled = false }) {
   const [open, setOpen] = useState(false);
+  const [align, setAlign] = useState("left");
   const ref = useRef(null);
 
   useEffect(() => {
@@ -37,7 +38,15 @@ export function MultiSelectDropdown({ options, selectedIds, onChange, placeholde
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          const opening = !open;
+          if (opening && ref.current) {
+            const rect = ref.current.getBoundingClientRect();
+            const popupWidth = Math.max(rect.width, 220);
+            setAlign(rect.left + popupWidth > window.innerWidth - 8 ? "right" : "left");
+          }
+          setOpen(opening);
+        }}
         className="flex w-full items-center gap-2 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none transition focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
       >
         <span
@@ -51,7 +60,11 @@ export function MultiSelectDropdown({ options, selectedIds, onChange, placeholde
       </button>
 
       {open && !disabled && (
-        <div className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-[220px] animate-fade-in overflow-hidden rounded-xl border border-border bg-white py-1.5 shadow-lg">
+        <div
+          className={`absolute top-full z-30 mt-1.5 w-full min-w-[220px] animate-fade-in overflow-hidden rounded-xl border border-border bg-white py-1.5 shadow-lg ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+        >
           <div className="max-h-56 overflow-y-auto">
             {options.map((opt) => {
               const checked = selectedIds.includes(opt.id);
