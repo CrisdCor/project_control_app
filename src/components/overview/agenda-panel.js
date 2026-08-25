@@ -138,7 +138,7 @@ export function AgendaPanel({ userId }) {
       ) : pageItems.length === 0 ? (
         <p className="text-sm text-muted-foreground">Sin tareas en tu agenda.</p>
       ) : (
-        <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
+        <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto overflow-x-hidden">
           {pageItems.map((item) => (
             <div key={item.id} className="flex items-center gap-2 py-2">
               <input
