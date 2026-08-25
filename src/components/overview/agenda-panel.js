@@ -176,7 +176,7 @@ export function AgendaPanel({ userId }) {
                     </>
                   }
                 >
-                  <span className="truncate">{item.text}</span>
+                  <span className="block truncate">{item.text}</span>
                 </Tooltip>
               </button>
 

@@ -78,7 +78,7 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
                 onClick={() => select(opt.value)}
                 className="flex w-full items-center justify-between px-3.5 py-2 text-left text-sm transition hover:bg-neutral-50"
               >
-                <span className="truncate">{opt.label}</span>
+                <span className="block truncate">{opt.label}</span>
                 {value === opt.value && <CheckIcon className="shrink-0 text-foreground" />}
               </button>
             ))}

@@ -75,7 +75,7 @@ export function MultiSelectDropdown({ options, selectedIds, onChange, placeholde
                   onClick={() => toggle(opt.id)}
                   className="flex w-full items-center justify-between px-3.5 py-2 text-left text-sm transition hover:bg-neutral-50"
                 >
-                  <span className="truncate">{opt.name}</span>
+                  <span className="block truncate">{opt.name}</span>
                   {checked && <CheckIcon className="shrink-0 text-foreground" />}
                 </button>
               );
