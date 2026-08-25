@@ -5,6 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { fetchTodayReminders, fetchPendingNoteMessages } from "@/lib/notifications";
+import { NotificationsPanel } from "@/components/layout/notifications-panel";
+import { TaskDrawer } from "@/components/tasks/task-drawer";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -15,6 +18,7 @@ import {
   UsersIcon,
   NotebookIcon,
   CalendarIcon,
+  BellIcon,
 } from "@/components/icons";
 
 const SECTIONS = [
@@ -49,7 +53,9 @@ export function Sidebar({ profile }) {
     Object.fromEntries(SECTIONS.map((s) => [s.id, false]))
   );
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hasUnseenMeetingTasks, setHasUnseenMeetingTasks] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [hasNotifications, setHasNotifications] = useState(false);
+  const [notifTaskId, setNotifTaskId] = useState(null);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("sidebar-collapsed") === "1";
@@ -66,29 +72,14 @@ export function Sidebar({ profile }) {
   useEffect(() => {
     if (!profile?.id) return;
     const supabase = createClient();
-    supabase
-      .from("agenda_items")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", profile.id)
-      .not("source_meeting_id", "is", null)
-      .is("seen_at", null)
-      .then(({ count }) => setHasUnseenMeetingTasks((count ?? 0) > 0));
+    (async () => {
+      const [{ taskReminders, agendaReminders }, messages] = await Promise.all([
+        fetchTodayReminders(supabase, profile.id),
+        fetchPendingNoteMessages(supabase, profile.id),
+      ]);
+      setHasNotifications(taskReminders.length + agendaReminders.length + messages.length > 0);
+    })();
   }, [profile?.id]);
-
-  async function handleOpenMenu() {
-    const next = !menuOpen;
-    setMenuOpen(next);
-    if (next && hasUnseenMeetingTasks && profile?.id) {
-      const supabase = createClient();
-      await supabase
-        .from("agenda_items")
-        .update({ seen_at: new Date().toISOString() })
-        .eq("user_id", profile.id)
-        .not("source_meeting_id", "is", null)
-        .is("seen_at", null);
-      setHasUnseenMeetingTasks(false);
-    }
-  }
 
   function toggleSection(id) {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -113,9 +104,25 @@ export function Sidebar({ profile }) {
         >
           <ChevronRightIcon />
         </button>
-        {hasUnseenMeetingTasks && (
-          <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-status-attention" title="Tienes notificaciones" />
-        )}
+        <button
+          onClick={() => setNotificationsOpen(true)}
+          className="relative mt-2 rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
+          title="Notificaciones"
+        >
+          <BellIcon />
+          {hasNotifications && (
+            <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 animate-pulse-soft rounded-full bg-status-attention" />
+          )}
+        </button>
+
+        <NotificationsPanel
+          open={notificationsOpen}
+          onClose={() => setNotificationsOpen(false)}
+          userId={profile?.id}
+          leftOffset="44px"
+          onOpenTask={(taskId) => setNotifTaskId(taskId)}
+        />
+        <TaskDrawer open={Boolean(notifTaskId)} onClose={() => setNotifTaskId(null)} taskId={notifTaskId} />
       </aside>
     );
   }
@@ -124,33 +131,43 @@ export function Sidebar({ profile }) {
     <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-surface">
       {/* Usuario */}
       <div className="relative border-b border-border p-3">
-        <button
-          onClick={handleOpenMenu}
-          className="flex w-full items-center gap-2.5 rounded-md p-1.5 text-left transition hover:bg-neutral-50"
-        >
-          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-neutral-200">
-            {profile?.photo_url ? (
-              <Image src={profile.photo_url} alt={profile.name} fill className="object-cover" />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center text-xs font-medium text-neutral-500">
-                {(profile?.name ?? "?").slice(0, 1).toUpperCase()}
-              </span>
+        <div className="flex w-full items-center gap-2.5 rounded-md p-1.5">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+          >
+            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-neutral-200">
+              {profile?.photo_url ? (
+                <Image src={profile.photo_url} alt={profile.name} fill className="object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-xs font-medium text-neutral-500">
+                  {(profile?.name ?? "?").slice(0, 1).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium leading-tight">{profile?.name ?? "Usuario"}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="truncate text-xs text-muted-foreground">{isAdmin ? "Administrador" : "Gestor"}</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setNotificationsOpen(true)}
+            className="relative shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
+            title="Notificaciones"
+          >
+            <BellIcon />
+            {hasNotifications && (
+              <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 animate-pulse-soft rounded-full bg-status-attention" />
             )}
-            {hasUnseenMeetingTasks && (
-              <span
-                className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-status-attention ring-2 ring-white"
-                title="Tienes tareas nuevas asignadas desde una reunión"
-              />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium leading-tight">{profile?.name ?? "Usuario"}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {isAdmin ? "Administrador" : "Gestor"}
-            </p>
-          </div>
-          <ChevronDownIcon className="shrink-0 text-muted-foreground" />
-        </button>
+          </button>
+
+          <button onClick={() => setMenuOpen((v) => !v)} className="shrink-0 text-muted-foreground">
+            <ChevronDownIcon />
+          </button>
+        </div>
 
         {menuOpen && (
           <div className="absolute left-3 right-3 top-full z-20 mt-1 animate-fade-in rounded-md border border-border bg-white py-1 shadow-md">
@@ -224,6 +241,20 @@ export function Sidebar({ profile }) {
           Ocultar menú
         </button>
       </div>
+
+      <NotificationsPanel
+        open={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        userId={profile?.id}
+        leftOffset="256px"
+        onOpenTask={(taskId) => setNotifTaskId(taskId)}
+      />
+
+      <TaskDrawer
+        open={Boolean(notifTaskId)}
+        onClose={() => setNotifTaskId(null)}
+        taskId={notifTaskId}
+      />
     </aside>
   );
 }
