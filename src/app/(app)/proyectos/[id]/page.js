@@ -260,7 +260,14 @@ export default function ProyectoDetallePage() {
               </tr>
             </thead>
             <tbody>
-              {tasks.map((t) => (
+              {[...tasks]
+                .sort((a, b) => {
+                  const aDone = a.status === "finalizada";
+                  const bDone = b.status === "finalizada";
+                  if (aDone !== bDone) return aDone ? 1 : -1;
+                  return new Date(a.end_date) - new Date(b.end_date);
+                })
+                .map((t) => (
                 <tr key={t.id} className="border-t border-border">
                   <td className="px-5 py-2.5">
                     <span className="inline-flex items-center gap-1.5">

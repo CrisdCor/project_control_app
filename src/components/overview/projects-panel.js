@@ -174,7 +174,12 @@ function ProjectTasksTable({ tasks, onOpenTask }) {
   if (!tasks) return <p className="text-xs text-muted-foreground">Cargando tareas...</p>;
   if (tasks.length === 0) return <p className="text-xs text-muted-foreground">Este proyecto aún no tiene tareas.</p>;
 
-  const sorted = [...tasks].sort((a, b) => new Date(a.end_date) - new Date(b.end_date));
+  const sorted = [...tasks].sort((a, b) => {
+    const aDone = a.status === "finalizada";
+    const bDone = b.status === "finalizada";
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return new Date(a.end_date) - new Date(b.end_date);
+  });
 
   const cols = [
     { key: "title", label: "Tarea" },
