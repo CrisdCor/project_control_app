@@ -161,6 +161,7 @@ export function AgendaPanel({ userId }) {
                   </span>
                 )}
                 <Tooltip
+                  className="min-w-0 flex-1"
                   content={
                     <>
                       <p className="font-medium">{item.text}</p>
