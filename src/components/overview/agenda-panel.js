@@ -6,6 +6,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { DatePicker } from "@/components/ui/date-picker";
 import { agendaSemaphore } from "@/lib/status";
 import { PlusIcon, TrashIcon, CalendarIcon } from "@/components/icons";
+import { Tooltip } from "@/components/ui/tooltip";
 
 const PAGE_SIZE = 15;
 
@@ -149,7 +150,7 @@ export function AgendaPanel({ userId }) {
 
               <button
                 onDoubleClick={() => startEdit(item)}
-                className={`flex min-w-0 flex-1 items-center gap-1.5 truncate text-left text-sm ${
+                className={`flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm ${
                   item.done ? "text-muted-foreground line-through" : ""
                 }`}
                 title="Doble clic para editar"
@@ -159,7 +160,23 @@ export function AgendaPanel({ userId }) {
                     <CalendarIcon className="h-3.5 w-3.5" />
                   </span>
                 )}
-                <span className="truncate">{item.text}</span>
+                <Tooltip
+                  content={
+                    <>
+                      <p className="font-medium">{item.text}</p>
+                      <p className="text-muted-foreground">
+                        {new Date(item.due_date + "T00:00:00").toLocaleDateString("es-CO", {
+                          weekday: "long",
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </>
+                  }
+                >
+                  <span className="truncate">{item.text}</span>
+                </Tooltip>
               </button>
 
               <span
