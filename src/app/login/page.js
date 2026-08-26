@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [transitioning, setTransitioning] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -31,8 +32,27 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/overview");
-    router.refresh();
+    setTransitioning(true);
+    setTimeout(() => {
+      router.push("/overview");
+      router.refresh();
+    }, 650);
+  }
+
+  if (transitioning) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
+        <Image
+          src="/logo-veloces.png"
+          alt="Veloces"
+          width={160}
+          height={42}
+          priority
+          className="animate-loading-pulse"
+        />
+        <p className="text-xs text-muted-foreground">Cargando tu espacio de trabajo...</p>
+      </main>
+    );
   }
 
   return (

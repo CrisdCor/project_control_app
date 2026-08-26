@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { StatusBadge } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
@@ -82,7 +83,11 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
         <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
           {pageItems.map((project) => (
             <div key={project.id} className="flex items-center gap-3 py-2">
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">{project.name}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                <Link href={`/proyectos/${project.id}`} className="hover:underline">
+                  {project.name}
+                </Link>
+              </span>
               <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                 {leaders[project.leader_id] ?? "—"}
               </span>

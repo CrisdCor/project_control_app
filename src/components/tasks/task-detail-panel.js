@@ -57,20 +57,25 @@ export function TaskDetailPanel({ taskId, projectId, initialTitle, onSaved, onCl
     } = await supabase.auth.getUser();
     setCurrentUser(user);
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-    setIsAdmin(profile?.role === "admin");
-
-    const { data: allProfiles } = await supabase.from("profiles").select("id, name").order("name");
-    setProfiles(allProfiles ?? []);
+    const profileRolePromise = supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    const allProfilesPromise = supabase.from("profiles").select("id, name").order("name");
 
     let currentProjectId = projectId;
 
     if (!isCreate) {
-      const { data: t } = await supabase.from("v_task_status").select("*").eq("id", taskId).maybeSingle();
+      const taskPromise = supabase.from("v_task_status").select("*").eq("id", taskId).maybeSingle();
+      const assigneesPromise = supabase.from("task_assignees").select("user_id").eq("task_id", taskId);
+      const checklistPromise = supabase
+        .from("task_checklist")
+        .select("*")
+        .eq("task_id", taskId)
+        .order("created_at");
+
+      const [{ data: profile }, { data: allProfiles }, { data: t }, { data: assignees }, { data: items }] =
+        await Promise.all([profileRolePromise, allProfilesPromise, taskPromise, assigneesPromise, checklistPromise]);
+
+      setIsAdmin(profile?.role === "admin");
+      setProfiles(allProfiles ?? []);
       setTask(t);
       if (t) {
         setTitle(t.title);
@@ -81,24 +86,19 @@ export function TaskDetailPanel({ taskId, projectId, initialTitle, onSaved, onCl
         setCancelReason(t.cancel_reason ?? "");
         currentProjectId = t.project_id;
       }
-
-      const { data: assignees } = await supabase
-        .from("task_assignees")
-        .select("user_id")
-        .eq("task_id", taskId);
       setAssigneeIds((assignees ?? []).map((a) => a.user_id));
-
-      const { data: items } = await supabase
-        .from("task_checklist")
-        .select("*")
-        .eq("task_id", taskId)
-        .order("created_at");
       setChecklist(items ?? []);
 
       if (user) {
         markTaskNotesRead(supabase, taskId, user.id);
       }
     } else {
+      const [{ data: profile }, { data: allProfiles }] = await Promise.all([
+        profileRolePromise,
+        allProfilesPromise,
+      ]);
+      setIsAdmin(profile?.role === "admin");
+      setProfiles(allProfiles ?? []);
       setTitle(initialTitle ?? "");
       setStartDate(todayISO());
       setEndDate("");
@@ -118,6 +118,27 @@ export function TaskDetailPanel({ taskId, projectId, initialTitle, onSaved, onCl
     setLoading(false);
   }
 
+  // Recarga ligera: solo la fila de la tarea (para que el estado calculado se refresque
+  // tras stand by / cancelar / finalizar), sin repetir las consultas de perfiles/checklist.
+  async function reloadTaskOnly() {
+    const supabase = createClient();
+    const { data: t } = await supabase.from("v_task_status").select("*").eq("id", taskId).maybeSingle();
+    setTask(t);
+    onSaved?.();
+  }
+
+  // Recarga ligera: solo las notas (el chat de la tarea), para que responder o
+  // agregar una nota no dispare todas las demás consultas del panel.
+  async function reloadChecklist() {
+    const supabase = createClient();
+    const { data: items } = await supabase
+      .from("task_checklist")
+      .select("*")
+      .eq("task_id", taskId)
+      .order("created_at");
+    setChecklist(items ?? []);
+  }
+
   useEffect(() => {
     (async () => {
       await load();
@@ -131,11 +152,6 @@ export function TaskDetailPanel({ taskId, projectId, initialTitle, onSaved, onCl
   const canEditTitle = isAdmin;
   const canEditAssignees = isAdmin;
   const canPostNotes = isAdmin || isLeader || isAssignee;
-
-  async function reloadAndNotify() {
-    await load();
-    onSaved?.();
-  }
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -213,8 +229,7 @@ export function TaskDetailPanel({ taskId, projectId, initialTitle, onSaved, onCl
       setError("No se pudo guardar la tarea.");
       return;
     }
-    await load();
-    onSaved?.();
+    await reloadTaskOnly();
     if (closeOnSave) onClose?.();
   }
 
@@ -224,14 +239,14 @@ export function TaskDetailPanel({ taskId, projectId, initialTitle, onSaved, onCl
       .from("tasks")
       .update({ standby_person: standbyPerson.trim(), standby_start_date: standbyStartDate })
       .eq("id", taskId);
-    reloadAndNotify();
+    reloadTaskOnly();
   }
 
   async function clearStandby() {
     const supabase = createClient();
     await supabase.from("tasks").update({ standby_person: null, standby_start_date: null }).eq("id", taskId);
     setStandbyPerson("");
-    reloadAndNotify();
+    reloadTaskOnly();
   }
 
   async function cancelTask() {
@@ -241,25 +256,25 @@ export function TaskDetailPanel({ taskId, projectId, initialTitle, onSaved, onCl
       .from("tasks")
       .update({ cancel_date: todayISO(), cancel_reason: cancelReason.trim() })
       .eq("id", taskId);
-    reloadAndNotify();
+    reloadTaskOnly();
   }
 
   async function reopenTask() {
     const supabase = createClient();
     await supabase.from("tasks").update({ cancel_date: null, cancel_reason: null }).eq("id", taskId);
-    reloadAndNotify();
+    reloadTaskOnly();
   }
 
   async function finishTask() {
     const supabase = createClient();
     await supabase.from("tasks").update({ finished_at: new Date().toISOString() }).eq("id", taskId);
-    reloadAndNotify();
+    reloadTaskOnly();
   }
 
   async function unfinishTask() {
     const supabase = createClient();
     await supabase.from("tasks").update({ finished_at: null }).eq("id", taskId);
-    reloadAndNotify();
+    reloadTaskOnly();
   }
 
   async function handleDeleteTask() {
@@ -451,7 +466,7 @@ export function TaskDetailPanel({ taskId, projectId, initialTitle, onSaved, onCl
                   canPost={canPostNotes}
                   currentUserId={currentUser?.id}
                   isAdmin={isAdmin}
-                  onChanged={reloadAndNotify}
+                  onChanged={reloadChecklist}
                 />
               </div>
             )}

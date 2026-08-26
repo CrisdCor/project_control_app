@@ -72,14 +72,46 @@ export function Sidebar({ profile }) {
   useEffect(() => {
     if (!profile?.id) return;
     const supabase = createClient();
-    (async () => {
+    let lastCount = null;
+
+    async function check() {
       const [{ taskReminders, agendaReminders }, messages] = await Promise.all([
         fetchTodayReminders(supabase, profile.id),
         fetchPendingNoteMessages(supabase, profile.id),
       ]);
-      setHasNotifications(taskReminders.length + agendaReminders.length + messages.length > 0);
-    })();
+      const count = taskReminders.length + agendaReminders.length + messages.length;
+      setHasNotifications(count > 0);
+
+      if (
+        lastCount !== null &&
+        count > lastCount &&
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted" &&
+        document.hidden
+      ) {
+        try {
+          new Notification("Control de Proyectos", {
+            body: "Tienes notificaciones nuevas pendientes.",
+            icon: "/logo-veloces.png",
+          });
+        } catch {
+          // algunos navegadores móviles no soportan Notification directamente
+        }
+      }
+      lastCount = count;
+    }
+
+    check();
+    const interval = setInterval(check, 60000);
+    return () => clearInterval(interval);
   }, [profile?.id]);
+
+  function requestNotificationPermission() {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }
 
   function toggleSection(id) {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -126,7 +158,7 @@ export function Sidebar({ profile }) {
         </nav>
 
         <button
-          onClick={() => setNotificationsOpen(true)}
+          onClick={() => { requestNotificationPermission(); setNotificationsOpen(true); }}
           className="relative mt-2 rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
           title="Notificaciones"
         >
@@ -175,7 +207,7 @@ export function Sidebar({ profile }) {
           </button>
 
           <button
-            onClick={() => setNotificationsOpen(true)}
+            onClick={() => { requestNotificationPermission(); setNotificationsOpen(true); }}
             className="relative shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
             title="Notificaciones"
           >

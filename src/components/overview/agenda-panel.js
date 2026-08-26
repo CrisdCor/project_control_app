@@ -65,21 +65,22 @@ export function AgendaPanel({ userId }) {
     e.preventDefault();
     if (!newText.trim()) return;
     const supabase = createClient();
-    await supabase
+    const { data: created } = await supabase
       .from("agenda_items")
-      .insert({ user_id: userId, text: newText.trim(), due_date: newDate });
+      .insert({ user_id: userId, text: newText.trim(), due_date: newDate })
+      .select()
+      .single();
+    if (created) setItems((prev) => [...prev, created]);
     setNewText("");
     setNewDate(todayISO());
-    load();
   }
 
   async function toggleDone(item) {
+    const done = !item.done;
+    const done_at = done ? new Date().toISOString() : null;
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, done, done_at } : i)));
     const supabase = createClient();
-    await supabase
-      .from("agenda_items")
-      .update({ done: !item.done, done_at: !item.done ? new Date().toISOString() : null })
-      .eq("id", item.id);
-    load();
+    await supabase.from("agenda_items").update({ done, done_at }).eq("id", item.id);
   }
 
   function startEdit(item) {
@@ -92,20 +93,19 @@ export function AgendaPanel({ userId }) {
     e?.preventDefault();
     if (!editingItem || !editText.trim()) return;
     setSavingEdit(true);
+    const text = editText.trim();
+    const due_date = editDate;
+    setItems((prev) => prev.map((i) => (i.id === editingItem.id ? { ...i, text, due_date } : i)));
     const supabase = createClient();
-    await supabase
-      .from("agenda_items")
-      .update({ text: editText.trim(), due_date: editDate })
-      .eq("id", editingItem.id);
+    await supabase.from("agenda_items").update({ text, due_date }).eq("id", editingItem.id);
     setSavingEdit(false);
     setEditingItem(null);
-    load();
   }
 
   async function handleDelete(item) {
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
     const supabase = createClient();
     await supabase.from("agenda_items").delete().eq("id", item.id);
-    load();
   }
 
   return (

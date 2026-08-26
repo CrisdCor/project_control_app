@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
+import { InactivityLogout } from "@/components/layout/inactivity-logout";
 
 export default async function AppLayout({ children }) {
   const supabase = await createClient();
@@ -21,6 +22,7 @@ export default async function AppLayout({ children }) {
 
   return (
     <div className="flex h-screen flex-col">
+      <InactivityLogout />
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar profile={profile} />
@@ -31,3 +33,4 @@ export default async function AppLayout({ children }) {
     </div>
   );
 }
+
