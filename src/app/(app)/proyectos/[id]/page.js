@@ -11,6 +11,7 @@ import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PlusIcon } from "@/components/icons";
 import { DatePicker } from "@/components/ui/date-picker";
+import { ActionMenu } from "@/components/ui/action-menu";
 import { fetchPendingNoteTaskIds } from "@/lib/notifications";
 
 export default function ProyectoDetallePage() {
@@ -18,6 +19,7 @@ export default function ProyectoDetallePage() {
   const router = useRouter();
 
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [project, setProject] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -43,6 +45,7 @@ export default function ProyectoDetallePage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    setCurrentUserId(user?.id ?? null);
     if (user) {
       const { data: profile } = await supabase
         .from("profiles")
@@ -69,13 +72,18 @@ export default function ProyectoDetallePage() {
     const pending = await fetchPendingNoteTaskIds(supabase, taskIds, user?.id);
 
     let assigneeMap = {};
+    let assigneeIdMap = {};
     if (taskIds.length) {
       const { data: assignees } = await supabase
         .from("task_assignees")
-        .select("task_id, profiles(name)")
+        .select("task_id, user_id, profiles(name)")
         .in("task_id", taskIds);
       assigneeMap = (assignees ?? []).reduce((acc, a) => {
         acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
+        return acc;
+      }, {});
+      assigneeIdMap = (assignees ?? []).reduce((acc, a) => {
+        acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.user_id] : [a.user_id];
         return acc;
       }, {});
     }
@@ -85,6 +93,7 @@ export default function ProyectoDetallePage() {
         ...x,
         hasPendingNote: pending.has(x.id),
         assignees: assigneeMap[x.id] ?? [],
+        assigneeIds: assigneeIdMap[x.id] ?? [],
       }))
     );
 
@@ -131,6 +140,13 @@ export default function ProyectoDetallePage() {
     const supabase = createClient();
     await supabase.from("projects").delete().eq("id", id);
     router.push("/proyectos");
+  }
+
+  async function handleDeleteTaskFromList(task) {
+    if (!window.confirm(`¿Eliminar la tarea "${task.title}"? Esta acción no se puede deshacer.`)) return;
+    const supabase = createClient();
+    await supabase.from("tasks").delete().eq("id", task.id);
+    load();
   }
 
   if (loading) return <p className="text-sm text-muted-foreground">Cargando...</p>;
@@ -288,12 +304,19 @@ export default function ProyectoDetallePage() {
                     <StatusBadge status={t.status} map={TASK_STATUS} />
                   </td>
                   <td className="px-5 py-2.5 text-right">
-                    <button
-                      onClick={() => setDrawerTaskId(t.id)}
-                      className="rounded-md border border-border px-2.5 py-1 text-xs transition hover:bg-neutral-50"
-                    >
-                      Ver / editar
-                    </button>
+                    <ActionMenu
+                      actions={[
+                        {
+                          label: isAdmin || (t.assigneeIds ?? []).includes(currentUserId) ? "Editar" : "Ver",
+                          onClick: () => setDrawerTaskId(t.id),
+                        },
+                        isAdmin && {
+                          label: "Eliminar",
+                          danger: true,
+                          onClick: () => handleDeleteTaskFromList(t),
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
