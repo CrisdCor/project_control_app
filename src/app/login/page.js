@@ -34,14 +34,18 @@ export default function LoginPage() {
     }
 
     setTransitioning(true);
-    setTimeout(() => {
-      router.push("/overview");
-      router.refresh();
-    }, 650);
   }
 
   if (transitioning) {
-    return <BrandLoadingScreen message="Cargando tu espacio de trabajo..." />;
+    return (
+      <BrandLoadingScreen
+        message="Cargando tu espacio de trabajo..."
+        onDone={() => {
+          router.push("/overview");
+          router.refresh();
+        }}
+      />
+    );
   }
 
   return (
