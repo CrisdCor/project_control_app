@@ -50,7 +50,7 @@ export function Sidebar({ profile }) {
   const pathname = usePathname();
   const router = useRouter();
   const [openSections, setOpenSections] = useState(() =>
-    Object.fromEntries(SECTIONS.map((s) => [s.id, false]))
+    Object.fromEntries(SECTIONS.map((s) => [s.id, s.id === "principal"]))
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
