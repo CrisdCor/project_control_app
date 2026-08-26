@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { BrandLoadingScreen } from "@/components/ui/brand-loading-screen";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,19 +41,7 @@ export default function LoginPage() {
   }
 
   if (transitioning) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
-        <Image
-          src="/logo-veloces.png"
-          alt="Veloces"
-          width={160}
-          height={42}
-          priority
-          className="animate-loading-pulse"
-        />
-        <p className="text-xs text-muted-foreground">Cargando tu espacio de trabajo...</p>
-      </main>
-    );
+    return <BrandLoadingScreen message="Cargando tu espacio de trabajo..." />;
   }
 
   return (
