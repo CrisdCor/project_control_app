@@ -8,7 +8,6 @@ import { PROJECT_STATUS, TASK_STATUS, dueSemaphore } from "@/lib/status";
 import { ChevronDownIcon, ChevronRightIcon } from "@/components/icons";
 import { TaskDrawer } from "@/components/tasks/task-drawer";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
-import { ActionMenu } from "@/components/ui/action-menu";
 import { fetchPendingNoteTaskIds } from "@/lib/notifications";
 
 const PAGE_SIZE = 5;
@@ -68,18 +67,13 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
 
     const taskIds = (tasks ?? []).map((t) => t.id);
     let assigneeMap = {};
-    let assigneeIdMap = {};
     if (taskIds.length) {
       const { data: assignees } = await supabase
         .from("task_assignees")
-        .select("task_id, user_id, profiles(name)")
+        .select("task_id, profiles(name)")
         .in("task_id", taskIds);
       assigneeMap = (assignees ?? []).reduce((acc, a) => {
         acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
-        return acc;
-      }, {});
-      assigneeIdMap = (assignees ?? []).reduce((acc, a) => {
-        acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.user_id] : [a.user_id];
         return acc;
       }, {});
     }
@@ -91,17 +85,9 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
       [projectId]: (tasks ?? []).map((t) => ({
         ...t,
         assignees: assigneeMap[t.id] ?? [],
-        assigneeIds: assigneeIdMap[t.id] ?? [],
         hasPendingNote: pending.has(t.id),
       })),
     }));
-  }
-
-  async function handleDeleteTask(task, projectId) {
-    if (!window.confirm(`¿Eliminar la tarea "${task.title}"? Esta acción no se puede deshacer.`)) return;
-    const supabase = createClient();
-    await supabase.from("tasks").delete().eq("id", task.id);
-    loadProjectTasks(projectId);
   }
 
   async function toggleExpand(projectId) {
@@ -161,9 +147,6 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
                   <ProjectTasksTable
                     tasks={tasksByProject[project.id]}
                     onOpenTask={(taskId) => setDrawerTask({ taskId, projectId: project.id })}
-                    onDeleteTask={(task) => handleDeleteTask(task, project.id)}
-                    isAdmin={isAdmin}
-                    currentUserId={currentUserId}
                   />
                 </div>
               )}
@@ -187,7 +170,7 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
   );
 }
 
-function ProjectTasksTable({ tasks, onOpenTask, onDeleteTask, isAdmin, currentUserId }) {
+function ProjectTasksTable({ tasks, onOpenTask }) {
   if (!tasks) return <p className="text-xs text-muted-foreground">Cargando tareas...</p>;
   if (tasks.length === 0) return <p className="text-xs text-muted-foreground">Este proyecto aún no tiene tareas.</p>;
 
@@ -239,15 +222,12 @@ function ProjectTasksTable({ tasks, onOpenTask, onDeleteTask, isAdmin, currentUs
               <StatusBadge status={task.status} map={TASK_STATUS} />
             </td>
             <td className="whitespace-nowrap py-2 text-right">
-              <ActionMenu
-                actions={[
-                  {
-                    label: isAdmin || (task.assigneeIds ?? []).includes(currentUserId) ? "Editar" : "Ver",
-                    onClick: () => onOpenTask(task.id),
-                  },
-                  isAdmin && { label: "Eliminar", danger: true, onClick: () => onDeleteTask(task) },
-                ]}
-              />
+              <button
+                onClick={() => onOpenTask(task.id)}
+                className="rounded-md border border-border px-2 py-1 text-xs transition hover:bg-neutral-50"
+              >
+                Actualizar
+              </button>
             </td>
           </tr>
         ))}
