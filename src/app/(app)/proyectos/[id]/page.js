@@ -278,8 +278,8 @@ export default function ProyectoDetallePage() {
             <tbody>
               {[...tasks]
                 .sort((a, b) => {
-                  const aDone = a.status === "finalizada";
-                  const bDone = b.status === "finalizada";
+                  const aDone = a.status === "finalizada" || a.status === "cancelada";
+                  const bDone = b.status === "finalizada" || b.status === "cancelada";
                   if (aDone !== bDone) return aDone ? 1 : -1;
                   return new Date(a.end_date) - new Date(b.end_date);
                 })
