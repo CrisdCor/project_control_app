@@ -93,6 +93,7 @@ export function Sidebar({ profile }) {
   }
 
   const isAdmin = profile?.role === "admin";
+  const flatNavItems = SECTIONS.flatMap((s) => s.items).filter((item) => !item.adminOnly || isAdmin);
 
   if (collapsed) {
     return (
@@ -104,6 +105,26 @@ export function Sidebar({ profile }) {
         >
           <ChevronRightIcon />
         </button>
+
+        <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
+          {flatNavItems.map((item) => {
+            const active = pathname.startsWith(item.href);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={item.label}
+                className={`rounded-md p-2 transition ${
+                  active ? "bg-black text-white" : "text-muted-foreground hover:bg-neutral-100 hover:text-foreground"
+                }`}
+              >
+                <Icon className="shrink-0" />
+              </Link>
+            );
+          })}
+        </nav>
+
         <button
           onClick={() => setNotificationsOpen(true)}
           className="relative mt-2 rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
