@@ -126,6 +126,7 @@ export default function ReunionesPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         profiles={profiles}
+        pastMeetings={meetings}
         currentUserId={currentUserId}
         onCreated={(created) => router.push(`/reuniones/${created.id}`)}
       />

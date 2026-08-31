@@ -4,15 +4,17 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
-import { PlusIcon } from "@/components/icons";
+import { PlusIcon, GripIcon } from "@/components/icons";
+import { fetchOutstandingCommitments } from "@/lib/meetings";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCreated }) {
+export function MeetingFormModal({ open, onClose, profiles, pastMeetings, currentUserId, onCreated }) {
   const [title, setTitle] = useState("");
   const [meetingDate, setMeetingDate] = useState(todayISO());
   const [startTime, setStartTime] = useState("");
@@ -21,8 +23,10 @@ export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCre
   const [participantIds, setParticipantIds] = useState([]);
   const [externalName, setExternalName] = useState("");
   const [externalParticipants, setExternalParticipants] = useState([]);
+  const [previousMeetingId, setPreviousMeetingId] = useState("");
   const [checklistDraft, setChecklistDraft] = useState("");
   const [checklistItems, setChecklistItems] = useState([]);
+  const [dragIndex, setDragIndex] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -35,6 +39,7 @@ export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCre
     setParticipantIds([]);
     setExternalName("");
     setExternalParticipants([]);
+    setPreviousMeetingId("");
     setChecklistDraft("");
     setChecklistItems([]);
     setError(null);
@@ -62,6 +67,17 @@ export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCre
     setChecklistItems((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleDrop(targetIndex) {
+    if (dragIndex === null || dragIndex === targetIndex) return;
+    setChecklistItems((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
+    setDragIndex(null);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
@@ -86,6 +102,7 @@ export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCre
         end_time: endTime || null,
         moderator_id: moderatorId,
         external_participants: externalParticipants,
+        previous_meeting_id: previousMeetingId || null,
         created_by: currentUserId,
       })
       .select()
@@ -104,9 +121,21 @@ export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCre
         .insert(allParticipantIds.map((userId) => ({ meeting_id: created.id, user_id: userId })));
     }
 
-    if (checklistItems.length) {
+    let finalChecklist = [...checklistItems];
+    if (previousMeetingId) {
+      const outstanding = await fetchOutstandingCommitments(supabase, previousMeetingId);
+      const carryOver = outstanding.map((item) => `Seguimiento: ${item.description}`);
+      finalChecklist = [...carryOver, ...finalChecklist];
+    }
+
+    if (finalChecklist.length) {
       await supabase.from("meeting_checklist_items").insert(
-        checklistItems.map((text) => ({ meeting_id: created.id, text, created_by: currentUserId }))
+        finalChecklist.map((text, position) => ({
+          meeting_id: created.id,
+          text,
+          position,
+          created_by: currentUserId,
+        }))
       );
     }
 
@@ -137,21 +166,11 @@ export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCre
         <div className="flex gap-3">
           <div className="flex flex-1 flex-col gap-1.5">
             <label className="text-sm font-medium">Hora inicio</label>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
+            <TimePicker value={startTime} onChange={setStartTime} placeholder="Inicio" />
           </div>
           <div className="flex flex-1 flex-col gap-1.5">
             <label className="text-sm font-medium">Hora fin</label>
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
+            <TimePicker value={endTime} onChange={setEndTime} placeholder="Fin" />
           </div>
         </div>
 
@@ -221,6 +240,24 @@ export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCre
           )}
         </div>
 
+        {pastMeetings?.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Reunión anterior relacionada (opcional)</label>
+            <FilterDropdown
+              placeholder="Ninguna — reunión esporádica"
+              value={previousMeetingId}
+              onChange={setPreviousMeetingId}
+              options={pastMeetings.map((m) => ({
+                value: m.id,
+                label: `${m.title} · ${new Date(m.meeting_date + "T00:00:00").toLocaleDateString("es-CO")}`,
+              }))}
+            />
+            <p className="text-xs text-muted-foreground">
+              Si es una reunión periódica, sus compromisos aún pendientes se agregan al orden del día.
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Lista de chequeo (orden del día)</label>
           <div className="flex gap-2">
@@ -250,8 +287,13 @@ export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCre
               {checklistItems.map((text, i) => (
                 <li
                   key={i}
-                  className="flex items-center justify-between gap-2 rounded-md border border-border bg-neutral-50 px-3 py-1.5 text-sm"
+                  draggable
+                  onDragStart={() => setDragIndex(i)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop(i)}
+                  className="flex cursor-grab items-center gap-2 rounded-md border border-border bg-neutral-50 px-3 py-1.5 text-sm active:cursor-grabbing"
                 >
+                  <GripIcon className="shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">{text}</span>
                   <button
                     type="button"
@@ -263,6 +305,9 @@ export function MeetingFormModal({ open, onClose, profiles, currentUserId, onCre
                 </li>
               ))}
             </ul>
+          )}
+          {checklistItems.length > 1 && (
+            <p className="text-xs text-muted-foreground">Arrastra los puntos para agruparlos por tema.</p>
           )}
         </div>
 

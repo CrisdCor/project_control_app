@@ -45,14 +45,35 @@ export default function ReunionDetallePage() {
   const [participantIdsDraft, setParticipantIdsDraft] = useState([]);
   const [savingDetail, setSavingDetail] = useState(false);
 
-  // nuevo ítem de acción
+  // nuevo compromiso
   const [description, setDescription] = useState("");
   const [suggestedValue, setSuggestedValue] = useState("");
   const [suggestedDueDate, setSuggestedDueDate] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState(null);
+  const [scheduleError, setScheduleError] = useState(null);
 
   const [dragOver, setDragOver] = useState(false);
+
+  async function reloadItems() {
+    const supabase = createClient();
+    const { data: actionItems } = await supabase
+      .from("meeting_action_items")
+      .select("*")
+      .eq("meeting_id", id)
+      .order("created_at");
+    setItems(actionItems ?? []);
+  }
+
+  async function reloadChecklist() {
+    const supabase = createClient();
+    const { data: checklist } = await supabase
+      .from("meeting_checklist_items")
+      .select("*")
+      .eq("meeting_id", id)
+      .order("position");
+    setChecklistItems(checklist ?? []);
+  }
 
   async function load() {
     const supabase = createClient();
@@ -79,19 +100,7 @@ export default function ReunionDetallePage() {
     const { data: profs } = await supabase.from("profiles").select("id, name").order("name");
     setProfiles(profs ?? []);
 
-    const { data: actionItems } = await supabase
-      .from("meeting_action_items")
-      .select("*")
-      .eq("meeting_id", id)
-      .order("created_at");
-    setItems(actionItems ?? []);
-
-    const { data: checklist } = await supabase
-      .from("meeting_checklist_items")
-      .select("*")
-      .eq("meeting_id", id)
-      .order("created_at");
-    setChecklistItems(checklist ?? []);
+    await Promise.all([reloadItems(), reloadChecklist()]);
 
     setLoading(false);
   }
@@ -100,6 +109,29 @@ export default function ReunionDetallePage() {
     (async () => {
       await load();
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // tiempo real: si alguien más actualiza esta reunión, se refleja sin recargar la página
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`meeting-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "meeting_action_items", filter: `meeting_id=eq.${id}` },
+        () => reloadItems()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "meeting_checklist_items", filter: `meeting_id=eq.${id}` },
+        () => reloadChecklist()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -192,39 +224,50 @@ export default function ReunionDetallePage() {
     setSuggestedValue("");
     setSuggestedDueDate("");
     setAdding(false);
-    load();
+    reloadItems();
   }
 
   async function handleDeleteItem(item) {
     const supabase = createClient();
     await supabase.from("meeting_action_items").delete().eq("id", item.id);
-    load();
+    reloadItems();
   }
 
   async function handleConvertAgenda(item) {
+    setScheduleError(null);
     if (!canSchedule || item.converted_to !== "none") return;
     const targetUserId = item.suggested_responsible;
     if (!targetUserId) return; // externo: no tiene agenda
 
     const supabase = createClient();
-    const { data: agendaItem, error } = await supabase
-      .from("agenda_items")
-      .insert({
-        user_id: targetUserId,
-        text: item.description,
-        due_date: item.suggested_due_date || todayISO(),
-        source_meeting_id: id,
-      })
-      .select()
-      .single();
+    // Generamos el id en el cliente: como se está creando el pendiente en la agenda
+    // de OTRA persona, releerlo con .select() después del insert chocaría con las
+    // reglas de privacidad de la agenda (cada quien solo puede leer la suya).
+    const newAgendaItemId = crypto.randomUUID();
 
-    if (error) return;
+    const { error: insertError } = await supabase.from("agenda_items").insert({
+      id: newAgendaItemId,
+      user_id: targetUserId,
+      text: item.description,
+      due_date: item.suggested_due_date || todayISO(),
+      source_meeting_id: id,
+    });
 
-    await supabase
+    if (insertError) {
+      setScheduleError("No se pudo enviar el compromiso a la agenda.");
+      return;
+    }
+
+    const { error: updateError } = await supabase
       .from("meeting_action_items")
-      .update({ converted_to: "agenda", converted_ref_id: agendaItem?.id })
+      .update({ converted_to: "agenda", converted_ref_id: newAgendaItemId })
       .eq("id", item.id);
-    load();
+
+    if (updateError) {
+      setScheduleError("El compromiso se agendó, pero no se pudo actualizar su estado.");
+    }
+
+    reloadItems();
   }
 
   const pendingItems = items.filter((i) => i.converted_to === "none");
@@ -361,14 +404,14 @@ export default function ReunionDetallePage() {
         </button>
       </div>
 
-      {/* Tareas + agenda */}
+      {/* Compromisos + agenda */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex min-h-0 flex-col rounded-[var(--radius-card)] border border-border bg-surface shadow-sm">
           <form onSubmit={handleAddItem} className="flex shrink-0 flex-col gap-2 border-b border-border p-4">
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe la tarea o responsabilidad que salió de la reunión..."
+              placeholder="Describe el compromiso que salió de la reunión..."
               rows={2}
               className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
             />
@@ -387,7 +430,7 @@ export default function ReunionDetallePage() {
                 disabled={adding || !description.trim()}
                 className="rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
               >
-                Agregar tarea
+                Agregar compromiso
               </button>
             </div>
             {addError && <p className="text-xs text-status-overdue">{addError}</p>}
@@ -395,7 +438,7 @@ export default function ReunionDetallePage() {
 
           <div className="flex-1 min-h-0 overflow-y-auto p-4">
             {pendingItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin tareas pendientes de agendar.</p>
+              <p className="text-sm text-muted-foreground">Sin compromisos pendientes de agendar.</p>
             ) : (
               <div className="flex flex-col gap-2.5">
                 {pendingItems.map((item) => {
@@ -459,11 +502,12 @@ export default function ReunionDetallePage() {
             dragOver ? "border-foreground bg-neutral-50" : "border-border bg-neutral-50/50"
           }`}
         >
-          <h3 className="mb-2 shrink-0 text-sm font-semibold">Tareas agendadas</h3>
+          <h3 className="mb-2 shrink-0 text-sm font-semibold">Compromisos agendados</h3>
+          {scheduleError && <p className="mb-2 shrink-0 text-xs text-status-overdue">{scheduleError}</p>}
           <div className="flex-1 min-h-0 overflow-y-auto">
             {scheduledItems.length === 0 ? (
               <p className="text-xs text-muted-foreground">
-                {canSchedule ? "Arrastra aquí una tarea para agendarla." : "Aún no hay tareas agendadas."}
+                {canSchedule ? "Arrastra aquí un compromiso para agendarlo." : "Aún no hay compromisos agendados."}
               </p>
             ) : (
               <div className="flex flex-col gap-2">
@@ -482,11 +526,9 @@ export default function ReunionDetallePage() {
       <MeetingChecklistDrawer
         open={checklistOpen}
         onClose={() => setChecklistOpen(false)}
-        meetingId={id}
         items={checklistItems}
         canEdit={canEdit}
-        currentUserId={currentUserId}
-        onChanged={load}
+        onChanged={reloadChecklist}
       />
     </div>
   );

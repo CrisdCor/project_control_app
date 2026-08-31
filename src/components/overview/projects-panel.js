@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { StatusBadge } from "@/components/status/status-badge";
@@ -9,15 +9,32 @@ import { PROJECT_STATUS } from "@/lib/status";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { ProjectTasksSlideOver } from "@/components/proyectos/project-tasks-slideover";
 
-const PAGE_SIZE = 5;
+const ROW_HEIGHT = 41; // alto aproximado de cada fila (incluye borde divisor)
 
 export function ProjectsPanel({ isAdmin, currentUserId }) {
   const [projects, setProjects] = useState([]);
   const [leaders, setLeaders] = useState({});
   const [leaderFilter, setLeaderFilter] = useState("");
-  const [page, setPage] = useState(1);
+  const [rawPage, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [managingProject, setManagingProject] = useState(null); // { id, name } | null
+  const [pageSize, setPageSize] = useState(5);
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    function recalc() {
+      const size = Math.max(1, Math.floor(el.clientHeight / ROW_HEIGHT));
+      setPageSize(size);
+    }
+
+    recalc();
+    const observer = new ResizeObserver(recalc);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -55,8 +72,9 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
     return list;
   }, [projects, leaderFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const pageItems = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const page = Math.min(rawPage, totalPages);
+  const pageItems = sorted.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
@@ -75,13 +93,13 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
         )}
       </div>
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Cargando...</p>
-      ) : pageItems.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No hay proyectos para mostrar.</p>
-      ) : (
-        <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
-          {pageItems.map((project) => (
+      <div ref={listRef} className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Cargando...</p>
+        ) : pageItems.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No hay proyectos para mostrar.</p>
+        ) : (
+          pageItems.map((project) => (
             <div key={project.id} className="flex items-center gap-3 py-2">
               <span className="min-w-0 flex-1 truncate text-sm font-medium">
                 <Link href={`/proyectos/${project.id}`} className="hover:underline">
@@ -99,9 +117,9 @@ export function ProjectsPanel({ isAdmin, currentUserId }) {
                 Gestionar
               </button>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       <div className="shrink-0">
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
