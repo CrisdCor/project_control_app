@@ -24,6 +24,12 @@ export function AgendaPanel({ userId }) {
   const [editText, setEditText] = useState("");
   const [editDate, setEditDate] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  function flashError(msg) {
+    setErrorMsg(msg);
+    setTimeout(() => setErrorMsg(null), 4000);
+  }
 
   async function load() {
     const supabase = createClient();
@@ -65,11 +71,15 @@ export function AgendaPanel({ userId }) {
     e.preventDefault();
     if (!newText.trim()) return;
     const supabase = createClient();
-    const { data: created } = await supabase
+    const { data: created, error } = await supabase
       .from("agenda_items")
       .insert({ user_id: userId, text: newText.trim(), due_date: newDate })
       .select()
       .single();
+    if (error) {
+      flashError("No se pudo agregar la tarea. Intenta de nuevo.");
+      return;
+    }
     if (created) setItems((prev) => [...prev, created]);
     setNewText("");
     setNewDate(todayISO());
@@ -80,7 +90,11 @@ export function AgendaPanel({ userId }) {
     const done_at = done ? new Date().toISOString() : null;
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, done, done_at } : i)));
     const supabase = createClient();
-    await supabase.from("agenda_items").update({ done, done_at }).eq("id", item.id);
+    const { error } = await supabase.from("agenda_items").update({ done, done_at }).eq("id", item.id);
+    if (error) {
+      setItems((prev) => prev.map((i) => (i.id === item.id ? item : i)));
+      flashError("No se pudo actualizar la tarea. Intenta de nuevo.");
+    }
   }
 
   function startEdit(item) {
@@ -93,24 +107,35 @@ export function AgendaPanel({ userId }) {
     e?.preventDefault();
     if (!editingItem || !editText.trim()) return;
     setSavingEdit(true);
+    const previous = editingItem;
     const text = editText.trim();
     const due_date = editDate;
     setItems((prev) => prev.map((i) => (i.id === editingItem.id ? { ...i, text, due_date } : i)));
     const supabase = createClient();
-    await supabase.from("agenda_items").update({ text, due_date }).eq("id", editingItem.id);
+    const { error } = await supabase.from("agenda_items").update({ text, due_date }).eq("id", editingItem.id);
     setSavingEdit(false);
     setEditingItem(null);
+    if (error) {
+      setItems((prev) => prev.map((i) => (i.id === previous.id ? previous : i)));
+      flashError("No se pudo guardar el cambio. Intenta de nuevo.");
+    }
   }
 
   async function handleDelete(item) {
     setItems((prev) => prev.filter((i) => i.id !== item.id));
     const supabase = createClient();
-    await supabase.from("agenda_items").delete().eq("id", item.id);
+    const { error } = await supabase.from("agenda_items").delete().eq("id", item.id);
+    if (error) {
+      setItems((prev) => [...prev, item]);
+      flashError("No se pudo eliminar la tarea. Intenta de nuevo.");
+    }
   }
 
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
       <h2 className="mb-3 shrink-0 text-sm font-semibold">Mi agenda</h2>
+
+      {errorMsg && <p className="mb-2 shrink-0 text-xs text-status-overdue">{errorMsg}</p>}
 
       <form onSubmit={handleAdd} className="mb-3 flex shrink-0 flex-col gap-2">
         <input
