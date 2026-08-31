@@ -45,7 +45,7 @@ export function AgendaPanel({ userId }) {
       .eq("done", true)
       .lt("done_at", twoDaysAgo);
 
-    const { data } = await supabase.from("agenda_items").select("*");
+    const { data } = await supabase.from("agenda_items").select("*").eq("user_id", userId);
     setItems(data ?? []);
     setLoading(false);
   }
@@ -90,8 +90,12 @@ export function AgendaPanel({ userId }) {
     const done_at = done ? new Date().toISOString() : null;
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, done, done_at } : i)));
     const supabase = createClient();
-    const { error } = await supabase.from("agenda_items").update({ done, done_at }).eq("id", item.id);
-    if (error) {
+    const { data, error } = await supabase
+      .from("agenda_items")
+      .update({ done, done_at })
+      .eq("id", item.id)
+      .select();
+    if (error || !data?.length) {
       setItems((prev) => prev.map((i) => (i.id === item.id ? item : i)));
       flashError("No se pudo actualizar la tarea. Intenta de nuevo.");
     }
@@ -112,10 +116,14 @@ export function AgendaPanel({ userId }) {
     const due_date = editDate;
     setItems((prev) => prev.map((i) => (i.id === editingItem.id ? { ...i, text, due_date } : i)));
     const supabase = createClient();
-    const { error } = await supabase.from("agenda_items").update({ text, due_date }).eq("id", editingItem.id);
+    const { data, error } = await supabase
+      .from("agenda_items")
+      .update({ text, due_date })
+      .eq("id", editingItem.id)
+      .select();
     setSavingEdit(false);
     setEditingItem(null);
-    if (error) {
+    if (error || !data?.length) {
       setItems((prev) => prev.map((i) => (i.id === previous.id ? previous : i)));
       flashError("No se pudo guardar el cambio. Intenta de nuevo.");
     }
@@ -124,8 +132,8 @@ export function AgendaPanel({ userId }) {
   async function handleDelete(item) {
     setItems((prev) => prev.filter((i) => i.id !== item.id));
     const supabase = createClient();
-    const { error } = await supabase.from("agenda_items").delete().eq("id", item.id);
-    if (error) {
+    const { data, error } = await supabase.from("agenda_items").delete().eq("id", item.id).select();
+    if (error || !data?.length) {
       setItems((prev) => [...prev, item]);
       flashError("No se pudo eliminar la tarea. Intenta de nuevo.");
     }
