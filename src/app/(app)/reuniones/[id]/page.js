@@ -83,21 +83,17 @@ export default function ReunionDetallePage() {
       data: { user },
     } = await supabase.auth.getUser();
     setCurrentUserId(user?.id ?? null);
-    if (user) {
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-      setIsAdmin(profile?.role === "admin");
-    }
 
-    const { data: m } = await supabase.from("meetings").select("*").eq("id", id).maybeSingle();
+    const [{ data: profile }, { data: m }, { data: parts }, { data: profs }] = await Promise.all([
+      user ? supabase.from("profiles").select("role").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+      supabase.from("meetings").select("*").eq("id", id).maybeSingle(),
+      supabase.from("meeting_participants").select("user_id, profiles(name)").eq("meeting_id", id),
+      supabase.from("profiles").select("id, name").order("name"),
+    ]);
+
+    setIsAdmin(profile?.role === "admin");
     setMeeting(m);
-
-    const { data: parts } = await supabase
-      .from("meeting_participants")
-      .select("user_id, profiles(name)")
-      .eq("meeting_id", id);
     setParticipants((parts ?? []).map((p) => ({ id: p.user_id, name: p.profiles?.name })).filter((p) => p.name));
-
-    const { data: profs } = await supabase.from("profiles").select("id, name").order("name");
     setProfiles(profs ?? []);
 
     await Promise.all([reloadItems(), reloadChecklist()]);
@@ -139,6 +135,7 @@ export default function ReunionDetallePage() {
   if (!meeting) return <p className="text-sm text-muted-foreground">No se encontró la reunión.</p>;
 
   const canEdit = isAdmin || meeting.moderator_id === currentUserId || meeting.created_by === currentUserId;
+  const canEditAgenda = isAdmin || meeting.moderator_id === currentUserId;
   const canSchedule = isAdmin || meeting.moderator_id === currentUserId;
   const canDeleteMeeting = isAdmin || meeting.created_by === currentUserId;
 
@@ -526,8 +523,10 @@ export default function ReunionDetallePage() {
       <MeetingChecklistDrawer
         open={checklistOpen}
         onClose={() => setChecklistOpen(false)}
+        meetingId={id}
         items={checklistItems}
-        canEdit={canEdit}
+        canEdit={canEditAgenda}
+        currentUserId={currentUserId}
         onChanged={reloadChecklist}
       />
     </div>
