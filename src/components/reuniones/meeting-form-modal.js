@@ -247,9 +247,12 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
               placeholder="Ninguna — reunión esporádica"
               value={previousMeetingId}
               onChange={setPreviousMeetingId}
+              fullWidth
               options={pastMeetings.map((m) => ({
                 value: m.id,
-                label: `${m.title} · ${new Date(m.meeting_date + "T00:00:00").toLocaleDateString("es-CO")}`,
+                label: `${m.title} · ${new Date(m.meeting_date + "T00:00:00").toLocaleDateString("es-CO")}${
+                  m.start_time ? ` · ${m.start_time.slice(0, 5)}` : ""
+                }`,
               }))}
             />
             <p className="text-xs text-muted-foreground">

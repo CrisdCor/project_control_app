@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDownIcon, CheckIcon } from "@/components/icons";
 
-export function FilterDropdown({ placeholder, value, options, onChange, allowClear = true }) {
+export function FilterDropdown({ placeholder, value, options, onChange, allowClear = true, fullWidth = false }) {
   const [open, setOpen] = useState(false);
   const [align, setAlign] = useState("left");
   const ref = useRef(null);
@@ -31,7 +31,7 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={`relative ${fullWidth ? "w-full" : ""}`}>
       <button
         type="button"
         onClick={() => {
@@ -42,9 +42,11 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
           }
           setOpen(opening);
         }}
-        className="flex items-center gap-2 rounded-md border border-border bg-white px-2.5 py-1.5 text-sm transition hover:bg-neutral-50"
+        className={`flex items-center gap-2 rounded-md border border-border bg-white px-2.5 py-1.5 text-sm transition hover:bg-neutral-50 ${
+          fullWidth ? "w-full justify-between" : ""
+        }`}
       >
-        <span className={selected ? "text-foreground" : "text-muted-foreground"}>
+        <span className={`truncate ${selected ? "text-foreground" : "text-muted-foreground"}`}>
           {selected ? selected.label : placeholder}
         </span>
         <ChevronDownIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -52,7 +54,9 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
 
       {open && (
         <div
-          className={`absolute top-full z-20 mt-1.5 w-56 animate-fade-in overflow-hidden rounded-xl border border-border bg-white py-1.5 shadow-lg ${
+          className={`absolute top-full z-20 mt-1.5 ${
+            fullWidth ? "w-full" : "w-56"
+          } animate-fade-in overflow-hidden rounded-xl border border-border bg-white py-1.5 shadow-lg ${
             align === "right" ? "right-0" : "left-0"
           }`}
         >
