@@ -10,6 +10,7 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [area, setArea] = useState(user?.area ?? "");
+  const [cargo, setCargo] = useState(user?.cargo ?? "");
   const [role, setRole] = useState(user?.role ?? "gestor");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,6 +22,7 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
     setName("");
     setEmail("");
     setArea("");
+    setCargo("");
     setRole("gestor");
     setPassword("");
     setPhotoFile(null);
@@ -37,6 +39,7 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
     formData.set("name", name);
     formData.set("email", email);
     formData.set("area", area);
+    formData.set("cargo", cargo);
     formData.set("role", role);
     if (password) formData.set("password", password);
     if (photoFile) formData.set("photo", photoFile);
@@ -88,16 +91,25 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
             />
           </div>
           <div className="flex flex-1 flex-col gap-1.5">
-            <label className="text-sm font-medium">Rol</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
+            <label className="text-sm font-medium">Cargo</label>
+            <input
+              value={cargo}
+              onChange={(e) => setCargo(e.target.value)}
               className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-            >
-              <option value="gestor">Gestor</option>
-              <option value="admin">Administrador</option>
-            </select>
+            />
           </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Rol</label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+          >
+            <option value="gestor">Gestor</option>
+            <option value="admin">Administrador</option>
+          </select>
         </div>
 
         <div className="flex flex-col gap-1.5">

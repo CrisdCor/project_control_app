@@ -125,6 +125,7 @@ export default function UsuariosPage() {
                 <th className="px-5 py-3 font-medium">Usuario</th>
                 <th className="px-5 py-3 font-medium">Correo</th>
                 <th className="px-5 py-3 font-medium">Área</th>
+                <th className="px-5 py-3 font-medium">Cargo</th>
                 <th className="px-5 py-3 font-medium">Rol</th>
                 <th className="px-5 py-3 font-medium"></th>
               </tr>
@@ -148,6 +149,7 @@ export default function UsuariosPage() {
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
                   <td className="px-5 py-3 text-muted-foreground">{u.area || "—"}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{u.cargo || "—"}</td>
                   <td className="px-5 py-3 text-muted-foreground">
                     {u.role === "admin" ? "Administrador" : "Gestor"}
                   </td>

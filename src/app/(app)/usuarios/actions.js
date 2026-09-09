@@ -53,6 +53,7 @@ export async function createUserAction(formData) {
   const name = formData.get("name")?.toString().trim();
   const email = formData.get("email")?.toString().trim();
   const area = formData.get("area")?.toString().trim() || null;
+  const cargo = formData.get("cargo")?.toString().trim() || null;
   const role = formData.get("role")?.toString();
   const password = formData.get("password")?.toString();
 
@@ -81,6 +82,7 @@ export async function createUserAction(formData) {
     name,
     email,
     area,
+    cargo,
     role,
     photo_url: photoUrl,
   });
@@ -102,6 +104,7 @@ export async function updateUserAction(formData) {
   const name = formData.get("name")?.toString().trim();
   const email = formData.get("email")?.toString().trim();
   const area = formData.get("area")?.toString().trim() || null;
+  const cargo = formData.get("cargo")?.toString().trim() || null;
   const role = formData.get("role")?.toString();
   const newPassword = formData.get("password")?.toString();
 
@@ -122,7 +125,7 @@ export async function updateUserAction(formData) {
 
   const photoUrl = await uploadPhotoIfPresent(admin, id, formData);
 
-  const patch = { name, email, area, role };
+  const patch = { name, email, area, cargo, role };
   if (photoUrl) patch.photo_url = photoUrl;
 
   const { error: profileError } = await admin.from("profiles").update(patch).eq("id", id);
@@ -142,8 +145,7 @@ export async function deleteUserAction(id) {
   if (error) {
     if (error.message?.toLowerCase().includes("foreign key")) {
       return {
-        error:
-          "No se puede eliminar: el usuario está asignado como líder de uno o más proyectos. Reasígnalos primero.",
+        error: "No se puede eliminar: el usuario tiene tareas o actividades asignadas. Reasígnalas primero.",
       };
     }
     return { error: `No se pudo eliminar el usuario: ${error.message}` };

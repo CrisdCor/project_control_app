@@ -1,19 +1,7 @@
-export const TASK_STATUS = {
-  pendiente_por_inicio: { label: "Pendiente por inicio", color: "var(--color-status-pending)" },
-  en_proceso: { label: "En proceso", color: "var(--color-status-progress)" },
-  stand_by: { label: "Stand by", color: "var(--color-status-attention)" },
-  cancelada: { label: "Cancelada", color: "var(--color-muted)" },
-  finalizada: { label: "Finalizada", color: "var(--color-status-done)" },
-  vencida: { label: "Vencida", color: "var(--color-status-overdue)" },
-};
-
-export const PROJECT_STATUS = {
-  pendiente_por_inicio: { label: "Pendiente por inicio", color: "var(--color-status-pending)" },
-  en_proceso: { label: "En proceso", color: "var(--color-status-progress)" },
-  atencion: { label: "Atención", color: "var(--color-status-attention)" },
-  vencido: { label: "Vencido", color: "var(--color-status-overdue)" },
-  finalizada_sin_cierre: { label: "Finalizada sin cierre", color: "var(--color-status-attention)" },
+export const BITACORA_TASK_STATUS = {
+  pendiente: { label: "Pendiente", color: "var(--color-status-progress)" },
   finalizado: { label: "Finalizado", color: "var(--color-status-done)" },
+  vencido: { label: "Vencido", color: "var(--color-status-overdue)" },
 };
 
 // Semáforo de vencimiento para fecha de compromiso de una tarea

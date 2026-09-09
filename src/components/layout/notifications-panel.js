@@ -4,31 +4,20 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DueDot } from "@/components/status/status-badge";
 import { dueSemaphore, agendaSemaphore } from "@/lib/status";
-import {
-  fetchTodayReminders,
-  dismissTaskReminder,
-  dismissAgendaReminder,
-  fetchPendingNoteMessages,
-} from "@/lib/notifications";
-import { ChatBubbleIcon } from "@/components/icons";
+import { fetchTodayReminders, dismissTaskReminder, dismissAgendaReminder } from "@/lib/notifications";
 
-export function NotificationsPanel({ open, onClose, userId, leftOffset, onOpenTask }) {
+export function NotificationsPanel({ open, onClose, userId, leftOffset }) {
   const [taskReminders, setTaskReminders] = useState([]);
   const [agendaReminders, setAgendaReminders] = useState([]);
-  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
 
   async function load() {
     if (!userId) return;
     setLoading(true);
     const supabase = createClient();
-    const [{ taskReminders: t, agendaReminders: a }, msgs] = await Promise.all([
-      fetchTodayReminders(supabase, userId),
-      fetchPendingNoteMessages(supabase, userId),
-    ]);
+    const { taskReminders: t, agendaReminders: a } = await fetchTodayReminders(supabase, userId);
     setTaskReminders(t);
     setAgendaReminders(a);
-    setMessages(msgs);
     setLoading(false);
   }
 
@@ -50,11 +39,6 @@ export function NotificationsPanel({ open, onClose, userId, leftOffset, onOpenTa
     setAgendaReminders((prev) => prev.filter((a) => a.id !== item.id));
     const supabase = createClient();
     await dismissAgendaReminder(supabase, item.id);
-  }
-
-  function handleOpenMessage(task) {
-    onOpenTask(task.id);
-    onClose();
   }
 
   if (!open) return null;
@@ -79,65 +63,39 @@ export function NotificationsPanel({ open, onClose, userId, leftOffset, onOpenTa
           {loading ? (
             <p className="text-sm text-muted-foreground">Cargando...</p>
           ) : (
-            <div className="flex flex-col gap-6">
-              <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Recordatorios de hoy
-                </h3>
-                {totalReminders === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nada pendiente para hoy.</p>
-                ) : (
-                  <div className="flex flex-col gap-1.5">
-                    {taskReminders.map((task) => (
-                      <button
-                        key={`task-${task.id}`}
-                        onClick={() => handleDismissTask(task)}
-                        title="Clic para marcar como visto"
-                        className="flex items-center gap-2 rounded-md border border-border p-2.5 text-left text-sm transition hover:bg-neutral-50"
-                      >
-                        <DueDot color={dueSemaphore(task.end_date)} />
-                        <span className="min-w-0 flex-1 truncate">{task.title}</span>
-                      </button>
-                    ))}
-                    {agendaReminders.map((item) => (
-                      <button
-                        key={`agenda-${item.id}`}
-                        onClick={() => handleDismissAgenda(item)}
-                        title="Clic para marcar como visto"
-                        className="flex items-center gap-2 rounded-md border border-border p-2.5 text-left text-sm transition hover:bg-neutral-50"
-                      >
-                        <DueDot color={agendaSemaphore(item.due_date)} />
-                        <span className="min-w-0 flex-1 truncate">{item.text}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Mensajes en tareas
-                </h3>
-                {messages.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Sin mensajes nuevos.</p>
-                ) : (
-                  <div className="flex flex-col gap-1.5">
-                    {messages.map((task) => (
-                      <button
-                        key={task.id}
-                        onClick={() => handleOpenMessage(task)}
-                        className="flex items-center gap-2 rounded-md border border-border p-2.5 text-left text-sm transition hover:bg-neutral-50"
-                      >
-                        <span className="shrink-0 text-status-attention">
-                          <ChatBubbleIcon />
-                        </span>
-                        <span className="min-w-0 flex-1 truncate">{task.title}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
+            <section>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Recordatorios de hoy
+              </h3>
+              {totalReminders === 0 ? (
+                <p className="text-sm text-muted-foreground">Nada pendiente para hoy.</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {taskReminders.map((task) => (
+                    <button
+                      key={`task-${task.id}`}
+                      onClick={() => handleDismissTask(task)}
+                      title="Clic para marcar como visto"
+                      className="flex items-center gap-2 rounded-md border border-border p-2.5 text-left text-sm transition hover:bg-neutral-50"
+                    >
+                      <DueDot color={dueSemaphore(task.due_date)} />
+                      <span className="min-w-0 flex-1 truncate">{task.title}</span>
+                    </button>
+                  ))}
+                  {agendaReminders.map((item) => (
+                    <button
+                      key={`agenda-${item.id}`}
+                      onClick={() => handleDismissAgenda(item)}
+                      title="Clic para marcar como visto"
+                      className="flex items-center gap-2 rounded-md border border-border p-2.5 text-left text-sm transition hover:bg-neutral-50"
+                    >
+                      <DueDot color={agendaSemaphore(item.due_date)} />
+                      <span className="min-w-0 flex-1 truncate">{item.text}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
           )}
         </div>
       </div>

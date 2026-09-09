@@ -5,9 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { fetchTodayReminders, fetchPendingNoteMessages } from "@/lib/notifications";
+import { fetchTodayReminders } from "@/lib/notifications";
 import { NotificationsPanel } from "@/components/layout/notifications-panel";
-import { TaskDrawer } from "@/components/tasks/task-drawer";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -34,7 +33,7 @@ const SECTIONS = [
     id: "gestion",
     label: "Gestión",
     items: [
-      { href: "/proyectos", label: "Proyectos", icon: FolderIcon },
+      { href: "/bitacoras", label: "Bitácoras", icon: FolderIcon },
       { href: "/reuniones", label: "Reuniones", icon: CalendarIcon },
       { href: "/usuarios", label: "Usuarios", icon: UsersIcon, adminOnly: true },
     ],
@@ -55,7 +54,6 @@ export function Sidebar({ profile }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
-  const [notifTaskId, setNotifTaskId] = useState(null);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("sidebar-collapsed") === "1";
@@ -75,11 +73,8 @@ export function Sidebar({ profile }) {
     let lastCount = null;
 
     async function check() {
-      const [{ taskReminders, agendaReminders }, messages] = await Promise.all([
-        fetchTodayReminders(supabase, profile.id),
-        fetchPendingNoteMessages(supabase, profile.id),
-      ]);
-      const count = taskReminders.length + agendaReminders.length + messages.length;
+      const { taskReminders, agendaReminders } = await fetchTodayReminders(supabase, profile.id);
+      const count = taskReminders.length + agendaReminders.length;
       setHasNotifications(count > 0);
 
       if (
@@ -173,9 +168,7 @@ export function Sidebar({ profile }) {
           onClose={() => setNotificationsOpen(false)}
           userId={profile?.id}
           leftOffset="44px"
-          onOpenTask={(taskId) => setNotifTaskId(taskId)}
         />
-        <TaskDrawer open={Boolean(notifTaskId)} onClose={() => setNotifTaskId(null)} taskId={notifTaskId} />
       </aside>
     );
   }
@@ -300,13 +293,6 @@ export function Sidebar({ profile }) {
         onClose={() => setNotificationsOpen(false)}
         userId={profile?.id}
         leftOffset="256px"
-        onOpenTask={(taskId) => setNotifTaskId(taskId)}
-      />
-
-      <TaskDrawer
-        open={Boolean(notifTaskId)}
-        onClose={() => setNotifTaskId(null)}
-        taskId={notifTaskId}
       />
     </aside>
   );

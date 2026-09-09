@@ -10,6 +10,7 @@ export default function PerfilPage() {
   const [profile, setProfile] = useState(null);
   const [name, setName] = useState("");
   const [area, setArea] = useState("");
+  const [cargo, setCargo] = useState("");
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [password, setPassword] = useState("");
@@ -28,13 +29,14 @@ export default function PerfilPage() {
       if (!user) return;
       const { data } = await supabase
         .from("profiles")
-        .select("id, name, email, area, role, photo_url")
+        .select("id, name, email, area, cargo, role, photo_url")
         .eq("id", user.id)
         .maybeSingle();
       if (data) {
         setProfile(data);
         setName(data.name ?? "");
         setArea(data.area ?? "");
+        setCargo(data.cargo ?? "");
       }
     })();
   }, []);
@@ -46,7 +48,7 @@ export default function PerfilPage() {
     setError(null);
 
     const supabase = createClient();
-    const patch = { name, area };
+    const patch = { name, area, cargo };
 
     if (photoFile) {
       const ext = photoFile.name.split(".").pop() || "jpg";
@@ -170,6 +172,15 @@ export default function PerfilPage() {
           <input
             value={area}
             onChange={(e) => setArea(e.target.value)}
+            className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Cargo</label>
+          <input
+            value={cargo}
+            onChange={(e) => setCargo(e.target.value)}
             className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
           />
         </div>

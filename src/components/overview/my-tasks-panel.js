@@ -2,13 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { StatusBadge, DueDot, PendingNoteDot } from "@/components/status/status-badge";
+import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
-import { TASK_STATUS, dueSemaphore } from "@/lib/status";
-import { TaskDrawer } from "@/components/tasks/task-drawer";
+import { BITACORA_TASK_STATUS, dueSemaphore } from "@/lib/status";
+import { BitacoraTaskDrawer } from "@/components/bitacoras/bitacora-task-drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
-import { fetchPendingNoteTaskIds } from "@/lib/notifications";
 
 const PAGE_SIZE = 5;
 
@@ -43,17 +42,30 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
     const supabase = createClient();
     setLoading(true);
 
+    // sin usuario específico seleccionado (yo mismo): las RLS ya limitan a mis tareas
+    // relacionadas (responsable de la tarea o de alguna actividad dentro de ella)
+    if (selectedUserId === currentUserId) {
+      const { data } = await supabase.from("v_bitacora_task_status").select("*");
+      setTasks(data ?? []);
+      setLoading(false);
+      return;
+    }
+
     let taskIds;
-    if (selectedUserId) {
-      const { data: assignedRows } = await supabase
-        .from("task_assignees")
-        .select("task_id")
-        .eq("user_id", selectedUserId);
-      taskIds = (assignedRows ?? []).map((r) => r.task_id);
-    } else {
-      // "Todos los responsables" (solo admin): todas las tareas visibles
-      const { data: allTasks } = await supabase.from("v_task_status").select("id");
+    if (!selectedUserId) {
+      const { data: allTasks } = await supabase.from("v_bitacora_task_status").select("id");
       taskIds = (allTasks ?? []).map((t) => t.id);
+    } else {
+      const [{ data: assignedRows }, { data: activityRows }] = await Promise.all([
+        supabase.from("bitacora_task_assignees").select("task_id").eq("user_id", selectedUserId),
+        supabase.from("bitacora_activities").select("bitacora_task_id").eq("assigned_to", selectedUserId),
+      ]);
+      taskIds = [
+        ...new Set([
+          ...(assignedRows ?? []).map((r) => r.task_id),
+          ...(activityRows ?? []).map((r) => r.bitacora_task_id),
+        ]),
+      ];
     }
 
     if (taskIds.length === 0) {
@@ -62,28 +74,8 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
       return;
     }
 
-    const { data } = await supabase.from("v_task_status").select("*").in("id", taskIds);
-    const pending = await fetchPendingNoteTaskIds(supabase, taskIds, currentUserId);
-
-    let assigneeMap = {};
-    if (!selectedUserId) {
-      const { data: assignees } = await supabase
-        .from("task_assignees")
-        .select("task_id, profiles(name)")
-        .in("task_id", taskIds);
-      assigneeMap = (assignees ?? []).reduce((acc, a) => {
-        acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
-        return acc;
-      }, {});
-    }
-
-    setTasks(
-      (data ?? []).map((t) => ({
-        ...t,
-        hasPendingNote: pending.has(t.id),
-        assignees: assigneeMap[t.id],
-      }))
-    );
+    const { data } = await supabase.from("v_bitacora_task_status").select("*").in("id", taskIds);
+    setTasks(data ?? []);
     setLoading(false);
   }
 
@@ -95,14 +87,14 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
   }, [selectedUserId]);
 
   const visible = useMemo(() => {
-    // finalizadas/canceladas ocultas por defecto
-    let list = tasks.filter((t) => t.status !== "finalizada" && t.status !== "cancelada");
+    // finalizadas ocultas por defecto
+    let list = tasks.filter((t) => t.status !== "finalizado");
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     list = list.filter((t) => {
-      const due = new Date(t.end_date + "T00:00:00");
+      const due = new Date(t.due_date + "T00:00:00");
       const diffDays = Math.round((due - today) / 86400000);
       switch (filter) {
         case "vencidas":
@@ -118,7 +110,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
       }
     });
 
-    return list.sort((a, b) => new Date(a.end_date) - new Date(b.end_date));
+    return list.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
   }, [tasks, filter]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
@@ -160,20 +152,12 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
         <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
           {pageItems.map((task) => (
             <div key={task.id} className="flex items-center gap-3 py-2">
-              <DueDot color={dueSemaphore(task.end_date)} />
-              <PendingNoteDot pending={task.hasPendingNote} />
-              <span className="min-w-0 flex-1 truncate text-sm">
-                {task.title}
-                {task.assignees?.length ? (
-                  <span className="ml-1.5 text-xs text-muted-foreground">
-                    · {task.assignees.filter(Boolean).join(", ")}
-                  </span>
-                ) : null}
-              </span>
+              <DueDot color={dueSemaphore(task.due_date)} />
+              <span className="min-w-0 flex-1 truncate text-sm">{task.title}</span>
               <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
-                {new Date(task.end_date + "T00:00:00").toLocaleDateString("es-CO")}
+                {new Date(task.due_date + "T00:00:00").toLocaleDateString("es-CO")}
               </span>
-              <StatusBadge status={task.status} map={TASK_STATUS} />
+              <StatusBadge status={task.status} map={BITACORA_TASK_STATUS} />
               <button
                 onClick={() => setDrawerTaskId(task.id)}
                 className="rounded-md border border-border px-2 py-1 text-xs transition hover:bg-neutral-50"
@@ -189,7 +173,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </div>
 
-      <TaskDrawer
+      <BitacoraTaskDrawer
         open={Boolean(drawerTaskId)}
         onClose={() => setDrawerTaskId(null)}
         taskId={drawerTaskId}
