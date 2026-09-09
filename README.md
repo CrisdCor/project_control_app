@@ -16,5 +16,5 @@ npm run dev
 
 ## Infraestructura
 
-- **Supabase**: proyecto `project_control_app` (org `CrisdCor-Tablero`).
+- **Supabase**: proyecto `project_control_app` (org `CrisdCor's Org`, ref `gwcoknsqlkcwpghsbqmb`). Reconstruido el 9 de septiembre de 2026 tras un borrado accidental del proyecto original.
 - **Vercel**: proyecto `project-control-app`, equipo `cristian-david-corrales-ospinas-projects`.

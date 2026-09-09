@@ -16,8 +16,8 @@
 | Recurso | Estado | Detalle |
 |---|---|---|
 | GitHub `CrisdCor/project_control_app` | **Pendiente** | Requiere tu confirmación (ver pregunta al final) |
-| Supabase — organización `CrisdCor-Tablero` | Existente | id `nybakckdbxklvpkdwutw` |
-| Supabase — proyecto `project_control_app` | ✅ Creado | ref `ijbzdivfdqlflthgwuss` · región `us-east-1` · costo $0/mes |
+| Supabase — organización `CrisdCor's Org` | Existente | id `mmjofnllvqefbudaaauy` (recreada el 9 sep 2026; la original `CrisdCor-Tablero` se eliminó por accidente) |
+| Supabase — proyecto `project_control_app` | ✅ Creado | ref `gwcoknsqlkcwpghsbqmb` · región `us-east-1` · costo $0/mes |
 | Vercel — equipo | Existente (reutilizado) | `cristian-david-corrales-ospinas-projects` |
 | Vercel — proyecto | Se crea en el primer despliegue | nombre sugerido: `project-control-app` |
 
