@@ -17,22 +17,16 @@ export function BitacoraTasksSlideOver({ open, onClose, bitacoraId, bitacoraName
     const supabase = createClient();
     const { data } = await supabase.from("v_bitacora_task_status").select("*").eq("bitacora_id", bitacoraId);
     const rows = data ?? [];
-    const taskIds = rows.map((t) => t.id);
 
-    let assigneeMap = {};
-    if (taskIds.length) {
-      const { data: assignees } = await supabase
-        .from("bitacora_task_assignees")
-        .select("task_id, profiles(name)")
-        .in("task_id", taskIds);
-      assigneeMap = (assignees ?? []).reduce((acc, a) => {
-        acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
-        return acc;
-      }, {});
+    const encargadoIds = [...new Set(rows.map((t) => t.encargado_id).filter(Boolean))];
+    let nameMap = {};
+    if (encargadoIds.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", encargadoIds);
+      nameMap = Object.fromEntries((profs ?? []).map((p) => [p.id, p.name]));
     }
 
     const sorted = rows
-      .map((t) => ({ ...t, assignees: assigneeMap[t.id] ?? [] }))
+      .map((t) => ({ ...t, encargadoName: nameMap[t.encargado_id] ?? "—" }))
       .sort((a, b) => {
         const aDone = a.status === "finalizado";
         const bDone = b.status === "finalizado";
@@ -94,7 +88,7 @@ export function BitacoraTasksSlideOver({ open, onClose, bitacoraId, bitacoraName
                   <thead>
                     <tr className="border-b border-border text-left text-xs text-muted-foreground">
                       <th className="py-2 pr-3 font-medium">Tarea</th>
-                      <th className="py-2 pr-3 font-medium">Responsable</th>
+                      <th className="py-2 pr-3 font-medium">Encargado</th>
                       <th className="py-2 pr-3 font-medium">Fecha límite</th>
                       <th className="py-2 pr-3 font-medium">Estado</th>
                     </tr>
@@ -108,7 +102,7 @@ export function BitacoraTasksSlideOver({ open, onClose, bitacoraId, bitacoraName
                       >
                         <td className="py-2.5 pr-3">{task.title}</td>
                         <td className="max-w-[140px] truncate py-2.5 pr-3 text-muted-foreground">
-                          {task.assignees.filter(Boolean).join(", ") || "—"}
+                          {task.encargadoName}
                         </td>
                         <td className="whitespace-nowrap py-2.5 pr-3 text-muted-foreground">
                           <span className="inline-flex items-center gap-1.5">

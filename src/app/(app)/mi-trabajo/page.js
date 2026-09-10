@@ -75,13 +75,13 @@ export default function MiTrabajoPage() {
       const { data: allTasks } = await supabase.from("v_bitacora_task_status").select("id");
       taskIds = (allTasks ?? []).map((t) => t.id);
     } else {
-      const [{ data: assignedRows }, { data: activityRows }] = await Promise.all([
-        supabase.from("bitacora_task_assignees").select("task_id").eq("user_id", selectedUserId),
+      const [{ data: encargadoRows }, { data: activityRows }] = await Promise.all([
+        supabase.from("bitacora_tasks").select("id").eq("encargado_id", selectedUserId),
         supabase.from("bitacora_activities").select("bitacora_task_id").eq("assigned_to", selectedUserId),
       ]);
       taskIds = [
         ...new Set([
-          ...(assignedRows ?? []).map((r) => r.task_id),
+          ...(encargadoRows ?? []).map((r) => r.id),
           ...(activityRows ?? []).map((r) => r.bitacora_task_id),
         ]),
       ];

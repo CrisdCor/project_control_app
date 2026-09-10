@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { DatePicker } from "@/components/ui/date-picker";
 import { StatusBadge } from "@/components/status/status-badge";
@@ -16,7 +17,6 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
   const [bitacora, setBitacora] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [task, setTask] = useState(null);
-  const [assigneeIds, setAssigneeIds] = useState([]);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -24,6 +24,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
 
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [encargadoId, setEncargadoId] = useState("");
 
   const [activityDetail, setActivityDetail] = useState("");
   const [activityDueDate, setActivityDueDate] = useState("");
@@ -56,14 +57,9 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
       if (t) {
         setTitle(t.title);
         setDueDate(t.due_date);
+        setEncargadoId(t.encargado_id ?? "");
         currentBitacoraId = t.bitacora_id;
       }
-
-      const { data: assignees } = await supabase
-        .from("bitacora_task_assignees")
-        .select("user_id")
-        .eq("task_id", taskId);
-      setAssigneeIds((assignees ?? []).map((a) => a.user_id));
 
       const { data: acts } = await supabase
         .from("bitacora_activities")
@@ -75,7 +71,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
     } else {
       setTitle("");
       setDueDate("");
-      setAssigneeIds([]);
+      setEncargadoId("");
       setActivities([]);
     }
 
@@ -117,7 +113,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
 
     if (!title.trim()) return setError("El nombre de la tarea es obligatorio.");
     if (!dueDate) return setError("La fecha límite es obligatoria.");
-    if (assigneeIds.length === 0) return setError("Selecciona al menos un responsable.");
+    if (!encargadoId) return setError("Selecciona un encargado.");
 
     setSaving(true);
     const supabase = createClient();
@@ -127,22 +123,18 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
         bitacora_id: bitacoraId,
         title: title.trim(),
         due_date: dueDate,
+        encargado_id: encargadoId,
         created_by: currentUserId,
       })
       .select()
       .single();
 
+    setSaving(false);
     if (insertError) {
-      setSaving(false);
       setError("No se pudo crear la tarea.");
       return;
     }
 
-    await supabase
-      .from("bitacora_task_assignees")
-      .insert(assigneeIds.map((userId) => ({ task_id: created.id, user_id: userId })));
-
-    setSaving(false);
     onSaved?.(created);
     onClose?.();
   }
@@ -152,20 +144,14 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
     setError(null);
     if (!title.trim()) return setError("El nombre de la tarea es obligatorio.");
     if (!dueDate) return setError("La fecha límite es obligatoria.");
+    if (!encargadoId) return setError("Selecciona un encargado.");
 
     setSaving(true);
     const supabase = createClient();
     const { error: updateError } = await supabase
       .from("bitacora_tasks")
-      .update({ title: title.trim(), due_date: dueDate })
+      .update({ title: title.trim(), due_date: dueDate, encargado_id: encargadoId })
       .eq("id", taskId);
-
-    await supabase.from("bitacora_task_assignees").delete().eq("task_id", taskId);
-    if (assigneeIds.length) {
-      await supabase
-        .from("bitacora_task_assignees")
-        .insert(assigneeIds.map((userId) => ({ task_id: taskId, user_id: userId })));
-    }
 
     setSaving(false);
     if (updateError) {
@@ -229,7 +215,11 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
     reloadActivities();
   }
 
-  const canEditActivity = (activity) => isAdmin || activity.assigned_to === currentUserId;
+  const isEncargado = !isCreate && task?.encargado_id === currentUserId;
+  const canManageTask = isAdmin; // título, fecha límite y encargado: solo admin
+  const canFinish = isAdmin || isEncargado; // cerrar la tarea: admin o el encargado
+  const canManageActivities = isAdmin || isEncargado; // crear/editar/eliminar actividades
+  const canEditActivityDone = (activity) => isAdmin || isEncargado || activity.assigned_to === currentUserId;
 
   return (
     <div className="flex h-full w-full flex-col bg-white">
@@ -258,30 +248,30 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  disabled={!isAdmin}
+                  disabled={!isCreate && !canManageTask}
                   className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Responsable(s)</label>
-                <MultiSelectDropdown
-                  options={profiles.map((p) => ({ id: p.id, name: p.name }))}
-                  selectedIds={assigneeIds}
-                  onChange={setAssigneeIds}
-                  placeholder="Selecciona responsables..."
-                  disabled={!isAdmin}
+                <label className="text-sm font-medium">Encargado</label>
+                <FilterDropdown
+                  placeholder="Selecciona un encargado"
+                  allowClear={false}
+                  value={encargadoId}
+                  onChange={setEncargadoId}
+                  options={profiles.map((p) => ({ value: p.id, label: p.name }))}
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">Fecha límite</label>
-                <DatePicker value={dueDate} onChange={setDueDate} disabled={!isAdmin} />
+                <DatePicker value={dueDate} onChange={setDueDate} disabled={!isCreate && !canManageTask} />
               </div>
 
               {error && <p className="text-sm text-status-overdue">{error}</p>}
 
-              {isAdmin && (
+              {(isCreate || canManageTask) && (
                 <button
                   type="submit"
                   disabled={saving}
@@ -292,7 +282,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
               )}
             </form>
 
-            {!isCreate && isAdmin && (
+            {!isCreate && canFinish && (
               <div className="rounded-md border border-border p-4">
                 <h3 className="mb-2 text-sm font-semibold">Finalización</h3>
                 {task?.finished_at ? (
@@ -328,8 +318,8 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
                         <input
                           type="checkbox"
                           checked={activity.is_done}
-                          onChange={() => canEditActivity(activity) && toggleActivityDone(activity)}
-                          disabled={!canEditActivity(activity)}
+                          onChange={() => canEditActivityDone(activity) && toggleActivityDone(activity)}
+                          disabled={!canEditActivityDone(activity)}
                           className="mt-0.5 h-4 w-4 shrink-0 accent-black"
                         />
                         <div className="min-w-0 flex-1">
@@ -341,7 +331,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
                             {new Date(activity.due_date + "T00:00:00").toLocaleDateString("es-CO")}
                           </p>
                         </div>
-                        {isAdmin && (
+                        {canManageActivities && (
                           <button
                             onClick={() => handleDeleteActivity(activity)}
                             className="shrink-0 text-xs text-muted-foreground transition hover:text-status-overdue"
@@ -354,7 +344,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
                   </div>
                 )}
 
-                {isAdmin && (
+                {canManageActivities && (
                   <form onSubmit={handleAddActivity} className="flex flex-col gap-2 border-t border-border pt-3">
                     <textarea
                       value={activityDetail}

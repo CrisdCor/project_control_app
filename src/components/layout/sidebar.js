@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { fetchTodayReminders } from "@/lib/notifications";
-import { NotificationsPanel } from "@/components/layout/notifications-panel";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -17,7 +15,6 @@ import {
   UsersIcon,
   NotebookIcon,
   CalendarIcon,
-  BellIcon,
 } from "@/components/icons";
 
 const SECTIONS = [
@@ -52,8 +49,6 @@ export function Sidebar({ profile }) {
     Object.fromEntries(SECTIONS.map((s) => [s.id, s.id === "principal"]))
   );
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("sidebar-collapsed") === "1";
@@ -65,47 +60,6 @@ export function Sidebar({ profile }) {
       window.localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
       return next;
     });
-  }
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    const supabase = createClient();
-    let lastCount = null;
-
-    async function check() {
-      const { taskReminders, agendaReminders } = await fetchTodayReminders(supabase, profile.id);
-      const count = taskReminders.length + agendaReminders.length;
-      setHasNotifications(count > 0);
-
-      if (
-        lastCount !== null &&
-        count > lastCount &&
-        typeof Notification !== "undefined" &&
-        Notification.permission === "granted" &&
-        document.hidden
-      ) {
-        try {
-          new Notification("Control de Proyectos", {
-            body: "Tienes notificaciones nuevas pendientes.",
-            icon: "/logo-veloces.png",
-          });
-        } catch {
-          // algunos navegadores móviles no soportan Notification directamente
-        }
-      }
-      lastCount = count;
-    }
-
-    check();
-    const interval = setInterval(check, 60000);
-    return () => clearInterval(interval);
-  }, [profile?.id]);
-
-  function requestNotificationPermission() {
-    if (typeof Notification === "undefined") return;
-    if (Notification.permission === "default") {
-      Notification.requestPermission();
-    }
   }
 
   function toggleSection(id) {
@@ -151,24 +105,6 @@ export function Sidebar({ profile }) {
             );
           })}
         </nav>
-
-        <button
-          onClick={() => { requestNotificationPermission(); setNotificationsOpen(true); }}
-          className="relative mt-2 rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
-          title="Notificaciones"
-        >
-          <BellIcon />
-          {hasNotifications && (
-            <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 animate-pulse-soft rounded-full bg-status-attention" />
-          )}
-        </button>
-
-        <NotificationsPanel
-          open={notificationsOpen}
-          onClose={() => setNotificationsOpen(false)}
-          userId={profile?.id}
-          leftOffset="44px"
-        />
       </aside>
     );
   }
@@ -177,43 +113,25 @@ export function Sidebar({ profile }) {
     <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-surface">
       {/* Usuario */}
       <div className="relative border-b border-border p-3">
-        <div className="flex w-full items-center gap-2.5 rounded-md p-1.5">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
-          >
-            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-neutral-200">
-              {profile?.photo_url ? (
-                <Image src={profile.photo_url} alt={profile.name} fill className="object-cover" />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-xs font-medium text-neutral-500">
-                  {(profile?.name ?? "?").slice(0, 1).toUpperCase()}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium leading-tight">{profile?.name ?? "Usuario"}</p>
-              <div className="flex items-center gap-1.5">
-                <p className="truncate text-xs text-muted-foreground">{isAdmin ? "Administrador" : "Gestor"}</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => { requestNotificationPermission(); setNotificationsOpen(true); }}
-            className="relative shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
-            title="Notificaciones"
-          >
-            <BellIcon />
-            {hasNotifications && (
-              <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 animate-pulse-soft rounded-full bg-status-attention" />
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className="flex w-full items-center gap-2.5 rounded-md p-1.5 text-left transition hover:bg-neutral-50"
+        >
+          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-neutral-200">
+            {profile?.photo_url ? (
+              <Image src={profile.photo_url} alt={profile.name} fill className="object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-xs font-medium text-neutral-500">
+                {(profile?.name ?? "?").slice(0, 1).toUpperCase()}
+              </span>
             )}
-          </button>
-
-          <button onClick={() => setMenuOpen((v) => !v)} className="shrink-0 text-muted-foreground">
-            <ChevronDownIcon />
-          </button>
-        </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium leading-tight">{profile?.name ?? "Usuario"}</p>
+            <p className="truncate text-xs text-muted-foreground">{isAdmin ? "Administrador" : "Gestor"}</p>
+          </div>
+          <ChevronDownIcon className="shrink-0 text-muted-foreground" />
+        </button>
 
         {menuOpen && (
           <div className="absolute left-3 right-3 top-full z-20 mt-1 animate-fade-in rounded-md border border-border bg-white py-1 shadow-md">
@@ -261,9 +179,7 @@ export function Sidebar({ profile }) {
                         key={item.href}
                         href={item.href}
                         className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition ${
-                          active
-                            ? "bg-black text-white"
-                            : "text-foreground hover:bg-neutral-100"
+                          active ? "bg-black text-white" : "text-foreground hover:bg-neutral-100"
                         }`}
                       >
                         <Icon className="shrink-0" />
@@ -287,13 +203,6 @@ export function Sidebar({ profile }) {
           Ocultar menú
         </button>
       </div>
-
-      <NotificationsPanel
-        open={notificationsOpen}
-        onClose={() => setNotificationsOpen(false)}
-        userId={profile?.id}
-        leftOffset="256px"
-      />
     </aside>
   );
 }

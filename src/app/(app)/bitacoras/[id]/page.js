@@ -44,22 +44,16 @@ export default function BitacoraDetallePage() {
     setBitacora(b);
 
     const { data: t } = await supabase.from("v_bitacora_task_status").select("*").eq("bitacora_id", id);
-    const taskIds = (t ?? []).map((x) => x.id);
 
-    let assigneeMap = {};
-    if (taskIds.length) {
-      const { data: assignees } = await supabase
-        .from("bitacora_task_assignees")
-        .select("task_id, profiles(name)")
-        .in("task_id", taskIds);
-      assigneeMap = (assignees ?? []).reduce((acc, a) => {
-        acc[a.task_id] = acc[a.task_id] ? [...acc[a.task_id], a.profiles?.name] : [a.profiles?.name];
-        return acc;
-      }, {});
+    const encargadoIds = [...new Set((t ?? []).map((x) => x.encargado_id).filter(Boolean))];
+    let nameMap = {};
+    if (encargadoIds.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", encargadoIds);
+      nameMap = Object.fromEntries((profs ?? []).map((p) => [p.id, p.name]));
     }
 
     const sorted = (t ?? [])
-      .map((x) => ({ ...x, assignees: assigneeMap[x.id] ?? [] }))
+      .map((x) => ({ ...x, encargadoName: nameMap[x.encargado_id] ?? "—" }))
       .sort((a, b2) => {
         const aDone = a.status === "finalizado";
         const bDone = b2.status === "finalizado";
@@ -167,7 +161,7 @@ export default function BitacoraDetallePage() {
             <thead>
               <tr className="text-left text-xs text-muted-foreground">
                 <th className="px-5 py-2.5 font-medium">Tarea</th>
-                <th className="px-5 py-2.5 font-medium">Responsable</th>
+                <th className="px-5 py-2.5 font-medium">Encargado</th>
                 <th className="px-5 py-2.5 font-medium">Fecha límite</th>
                 <th className="px-5 py-2.5 font-medium">Estado</th>
                 <th className="px-5 py-2.5 font-medium"></th>
@@ -178,7 +172,7 @@ export default function BitacoraDetallePage() {
                 <tr key={t.id} className="border-t border-border">
                   <td className="px-5 py-2.5">{t.title}</td>
                   <td className="max-w-[140px] truncate px-5 py-2.5 text-muted-foreground">
-                    {t.assignees?.filter(Boolean).join(", ") || "—"}
+                    {t.encargadoName}
                   </td>
                   <td className="whitespace-nowrap px-5 py-2.5">
                     <span className="inline-flex items-center gap-1.5 text-muted-foreground">
