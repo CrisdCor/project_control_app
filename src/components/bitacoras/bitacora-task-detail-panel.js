@@ -6,7 +6,12 @@ import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { DatePicker } from "@/components/ui/date-picker";
 import { StatusBadge } from "@/components/status/status-badge";
-import { BITACORA_TASK_STATUS } from "@/lib/status";
+import { BITACORA_TASK_STATUS, bitacoraTaskStatusKey } from "@/lib/status";
+
+function formatDate(d) {
+  if (!d) return "";
+  return new Date(d + "T00:00:00").toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" });
+}
 
 export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, backLabel = "✕", closeOnSave = false }) {
   const isCreate = !taskId;
@@ -31,6 +36,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
   const [activityAssignee, setActivityAssignee] = useState("");
   const [addingActivity, setAddingActivity] = useState(false);
   const [activityError, setActivityError] = useState(null);
+  const [observationsDraft, setObservationsDraft] = useState({});
 
   async function load() {
     setLoading(true);
@@ -67,6 +73,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
         .eq("bitacora_task_id", taskId)
         .order("created_at");
       setActivities(acts ?? []);
+      setObservationsDraft(Object.fromEntries((acts ?? []).map((a) => [a.id, a.observations ?? ""])));
       setActivityDueDate(t?.due_date ?? "");
     } else {
       setTitle("");
@@ -105,6 +112,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
       .eq("bitacora_task_id", taskId)
       .order("created_at");
     setActivities(acts ?? []);
+    setObservationsDraft(Object.fromEntries((acts ?? []).map((a) => [a.id, a.observations ?? ""])));
   }
 
   async function handleCreate(e) {
@@ -148,26 +156,47 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
 
     setSaving(true);
     const supabase = createClient();
-    const { error: updateError } = await supabase
-      .from("bitacora_tasks")
-      .update({ title: title.trim(), due_date: dueDate, encargado_id: encargadoId })
-      .eq("id", taskId);
+    const patch = { title: title.trim() };
+    if (isAdmin) {
+      patch.due_date = dueDate;
+      patch.encargado_id = encargadoId;
+    }
+    const { error: updateError } = await supabase.from("bitacora_tasks").update(patch).eq("id", taskId);
 
     setSaving(false);
     if (updateError) {
-      setError("No se pudo guardar la tarea. Verifica que las fechas de las actividades no queden por delante.");
+      setError("No se pudo guardar la tarea.");
       return;
     }
     await reloadTaskOnly();
     if (closeOnSave) onClose?.();
   }
 
-  async function toggleFinished() {
+  // admin: finaliza y aprueba de una vez. encargado (no admin): queda pendiente de aprobación.
+  async function markCompleted() {
     const supabase = createClient();
-    await supabase
-      .from("bitacora_tasks")
-      .update({ finished_at: task.finished_at ? null : new Date().toISOString() })
-      .eq("id", taskId);
+    const now = new Date().toISOString();
+    const patch = isAdmin ? { completed_at: now, finished_at: now } : { completed_at: now };
+    await supabase.from("bitacora_tasks").update(patch).eq("id", taskId);
+    reloadTaskOnly();
+  }
+
+  // el encargado deshace su propio envío, o el admin la rechaza: vuelve a pendiente/vencida
+  async function undoCompleted() {
+    const supabase = createClient();
+    await supabase.from("bitacora_tasks").update({ completed_at: null }).eq("id", taskId);
+    reloadTaskOnly();
+  }
+
+  async function approveTask() {
+    const supabase = createClient();
+    await supabase.from("bitacora_tasks").update({ finished_at: new Date().toISOString() }).eq("id", taskId);
+    reloadTaskOnly();
+  }
+
+  async function reopenTask() {
+    const supabase = createClient();
+    await supabase.from("bitacora_tasks").update({ finished_at: null, completed_at: null }).eq("id", taskId);
     reloadTaskOnly();
   }
 
@@ -209,6 +238,14 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
     reloadActivities();
   }
 
+  async function saveObservations(activity) {
+    const text = observationsDraft[activity.id] ?? "";
+    if (text === (activity.observations ?? "")) return;
+    const supabase = createClient();
+    await supabase.from("bitacora_activities").update({ observations: text || null }).eq("id", activity.id);
+    reloadActivities();
+  }
+
   async function handleDeleteActivity(activity) {
     const supabase = createClient();
     await supabase.from("bitacora_activities").delete().eq("id", activity.id);
@@ -216,16 +253,20 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
   }
 
   const isEncargado = !isCreate && task?.encargado_id === currentUserId;
-  const canManageTask = isAdmin; // título, fecha límite y encargado: solo admin
-  const canFinish = isAdmin || isEncargado; // cerrar la tarea: admin o el encargado
-  const canManageActivities = isAdmin || isEncargado; // crear/editar/eliminar actividades
-  const canEditActivityDone = (activity) => isAdmin || isEncargado || activity.assigned_to === currentUserId;
+  const canEditTitle = isCreate || isAdmin || isEncargado;
+  const canEditDueDateEncargado = isCreate || isAdmin; // fecha límite y encargado: solo admin
+  const canFinish = isAdmin || isEncargado;
+  const canManageActivities = isAdmin || isEncargado;
+  const canTouchActivity = (activity) => isAdmin || isEncargado || activity.assigned_to === currentUserId;
 
   return (
     <div className="flex h-full w-full flex-col bg-white">
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <h2 className="text-sm font-semibold">{isCreate ? "Nueva tarea" : "Editar tarea"}</h2>
-        <button onClick={onClose} className="text-muted-foreground transition hover:text-foreground">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold">{isCreate ? "Nueva tarea" : task?.title || "Tarea"}</h2>
+          {!isCreate && bitacora && <p className="truncate text-xs text-muted-foreground">{bitacora.name}</p>}
+        </div>
+        <button onClick={onClose} className="shrink-0 text-muted-foreground transition hover:text-foreground">
           {backLabel}
         </button>
       </div>
@@ -237,8 +278,8 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
           <div className="flex flex-col gap-6">
             {!isCreate && task && (
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{bitacora?.name}</span>
-                <StatusBadge status={task.status} map={BITACORA_TASK_STATUS} />
+                <span className="text-xs text-muted-foreground">Fecha límite: {formatDate(task.due_date)}</span>
+                <StatusBadge status={bitacoraTaskStatusKey(task)} map={BITACORA_TASK_STATUS} />
               </div>
             )}
 
@@ -248,7 +289,7 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  disabled={!isCreate && !canManageTask}
+                  disabled={!canEditTitle}
                   className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
                 />
               </div>
@@ -262,16 +303,22 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
                   onChange={setEncargadoId}
                   options={profiles.map((p) => ({ value: p.id, label: p.name }))}
                 />
+                {!canEditDueDateEncargado && (
+                  <p className="text-xs text-muted-foreground">Solo el administrador puede reasignar el encargado.</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">Fecha límite</label>
-                <DatePicker value={dueDate} onChange={setDueDate} disabled={!isCreate && !canManageTask} />
+                <DatePicker value={dueDate} onChange={setDueDate} disabled={!canEditDueDateEncargado} />
+                {!canEditDueDateEncargado && (
+                  <p className="text-xs text-muted-foreground">Solo el administrador puede cambiar la fecha límite.</p>
+                )}
               </div>
 
               {error && <p className="text-sm text-status-overdue">{error}</p>}
 
-              {(isCreate || canManageTask) && (
+              {(isCreate || canEditTitle) && (
                 <button
                   type="submit"
                   disabled={saving}
@@ -282,25 +329,61 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
               )}
             </form>
 
-            {!isCreate && canFinish && (
+            {!isCreate && (canFinish || (isAdmin && task?.completed_at)) && (
               <div className="rounded-md border border-border p-4">
                 <h3 className="mb-2 text-sm font-semibold">Finalización</h3>
                 {task?.finished_at ? (
                   <div className="flex flex-col gap-2 text-sm">
                     <p>Finalizada el {new Date(task.finished_at).toLocaleDateString("es-CO")}</p>
-                    <button
-                      onClick={toggleFinished}
-                      className="self-start rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-neutral-50"
-                    >
-                      Reabrir tarea
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={reopenTask}
+                        className="self-start rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-neutral-50"
+                      >
+                        Reabrir tarea
+                      </button>
+                    )}
+                  </div>
+                ) : task?.completed_at ? (
+                  <div className="flex flex-col gap-2 text-sm">
+                    <p className="text-status-attention">
+                      Pendiente por aprobación — completada el{" "}
+                      {new Date(task.completed_at).toLocaleDateString("es-CO")}
+                    </p>
+                    <div className="flex gap-2">
+                      {isAdmin ? (
+                        <>
+                          <button
+                            onClick={approveTask}
+                            className="rounded-md bg-status-done px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+                          >
+                            Aprobar
+                          </button>
+                          <button
+                            onClick={undoCompleted}
+                            className="rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-neutral-50"
+                          >
+                            Rechazar
+                          </button>
+                        </>
+                      ) : (
+                        isEncargado && (
+                          <button
+                            onClick={undoCompleted}
+                            className="rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-neutral-50"
+                          >
+                            Deshacer envío
+                          </button>
+                        )
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <button
-                    onClick={toggleFinished}
+                    onClick={markCompleted}
                     className="self-start rounded-md bg-status-done px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
                   >
-                    Marcar como finalizada
+                    {isAdmin ? "Marcar como finalizada" : "Marcar como completada"}
                   </button>
                 )}
               </div>
@@ -308,39 +391,68 @@ export function BitacoraTaskDetailPanel({ taskId, bitacoraId, onSaved, onClose, 
 
             {!isCreate && (
               <div className="rounded-md border border-border p-4">
-                <h3 className="mb-3 text-sm font-semibold">Lista de chequeo</h3>
+                <h3 className="text-sm font-semibold">Lista de chequeo</h3>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Agregando actividades a <span className="font-medium text-foreground">{task?.title}</span> ·
+                  fecha límite de la tarea: {formatDate(dueDate)}
+                </p>
+
                 {activities.length === 0 ? (
                   <p className="mb-3 text-sm text-muted-foreground">Sin actividades todavía.</p>
                 ) : (
                   <div className="mb-4 flex flex-col gap-2">
-                    {activities.map((activity) => (
-                      <div key={activity.id} className="flex items-start gap-2.5 rounded-md border border-border p-2.5">
-                        <input
-                          type="checkbox"
-                          checked={activity.is_done}
-                          onChange={() => canEditActivityDone(activity) && toggleActivityDone(activity)}
-                          disabled={!canEditActivityDone(activity)}
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-black"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-sm ${activity.is_done ? "text-muted-foreground line-through" : ""}`}>
-                            {activity.detail}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {profiles.find((p) => p.id === activity.assigned_to)?.name ?? "—"} ·{" "}
-                            {new Date(activity.due_date + "T00:00:00").toLocaleDateString("es-CO")}
-                          </p>
+                    {activities.map((activity) => {
+                      const editable = canTouchActivity(activity);
+                      return (
+                        <div key={activity.id} className="rounded-md border border-border p-2.5">
+                          <div className="flex items-start gap-2.5">
+                            <input
+                              type="checkbox"
+                              checked={activity.is_done}
+                              onChange={() => editable && toggleActivityDone(activity)}
+                              disabled={!editable}
+                              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className={`text-sm ${activity.is_done ? "text-muted-foreground line-through" : ""}`}>
+                                {activity.detail}
+                              </p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {profiles.find((p) => p.id === activity.assigned_to)?.name ?? "—"} ·{" "}
+                                {new Date(activity.due_date + "T00:00:00").toLocaleDateString("es-CO")}
+                              </p>
+                            </div>
+                            {canManageActivities && (
+                              <button
+                                onClick={() => handleDeleteActivity(activity)}
+                                className="shrink-0 text-xs text-muted-foreground transition hover:text-status-overdue"
+                              >
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
+
+                          {editable ? (
+                            <textarea
+                              value={observationsDraft[activity.id] ?? ""}
+                              onChange={(e) =>
+                                setObservationsDraft((prev) => ({ ...prev, [activity.id]: e.target.value }))
+                              }
+                              onBlur={() => saveObservations(activity)}
+                              placeholder="Observaciones (opcional)..."
+                              rows={2}
+                              className="mt-2 w-full rounded-md border border-border bg-white px-2.5 py-1.5 text-xs outline-none focus:border-foreground"
+                            />
+                          ) : (
+                            activity.observations && (
+                              <p className="mt-2 rounded-md bg-neutral-50 px-2.5 py-1.5 text-xs text-muted-foreground">
+                                {activity.observations}
+                              </p>
+                            )
+                          )}
                         </div>
-                        {canManageActivities && (
-                          <button
-                            onClick={() => handleDeleteActivity(activity)}
-                            className="shrink-0 text-xs text-muted-foreground transition hover:text-status-overdue"
-                          >
-                            Eliminar
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

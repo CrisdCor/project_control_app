@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { StatusBadge, DueDot } from "@/components/status/status-badge";
-import { BITACORA_TASK_STATUS, dueSemaphore } from "@/lib/status";
+import { BITACORA_TASK_STATUS, bitacoraTaskStatusKey, dueSemaphore } from "@/lib/status";
 import { BitacoraTaskDrawer } from "@/components/bitacoras/bitacora-task-drawer";
 import { PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
 
@@ -181,7 +181,7 @@ export default function BitacoraDetallePage() {
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-5 py-2.5">
-                    <StatusBadge status={t.status} map={BITACORA_TASK_STATUS} />
+                    <StatusBadge status={bitacoraTaskStatusKey(t)} map={BITACORA_TASK_STATUS} />
                   </td>
                   <td className="px-5 py-2.5 text-right">
                     <button

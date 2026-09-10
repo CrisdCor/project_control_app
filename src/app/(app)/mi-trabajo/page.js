@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
-import { BITACORA_TASK_STATUS, dueSemaphore } from "@/lib/status";
+import { BITACORA_TASK_STATUS, bitacoraTaskStatusKey, dueSemaphore } from "@/lib/status";
 import { BitacoraTaskDrawer } from "@/components/bitacoras/bitacora-task-drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
@@ -165,7 +165,7 @@ export default function MiTrabajoPage() {
 
           {isAdmin && users.length > 0 && (
             <FilterDropdown
-              placeholder="Todos los responsables"
+              placeholder="Todos los encargados"
               value={selectedUserId ?? ""}
               onChange={setSelectedUserId}
               options={users.map((u) => ({ value: u.id, label: u.name }))}
@@ -188,7 +188,7 @@ export default function MiTrabajoPage() {
                 <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                   {new Date(task.due_date + "T00:00:00").toLocaleDateString("es-CO")}
                 </span>
-                <StatusBadge status={task.status} map={BITACORA_TASK_STATUS} />
+                <StatusBadge status={bitacoraTaskStatusKey(task)} map={BITACORA_TASK_STATUS} />
                 <button
                   onClick={() => setDrawerTaskId(task.id)}
                   className="rounded-md border border-border px-2.5 py-1 text-xs transition hover:bg-neutral-50"

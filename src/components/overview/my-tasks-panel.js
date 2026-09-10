@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
-import { BITACORA_TASK_STATUS, dueSemaphore } from "@/lib/status";
+import { BITACORA_TASK_STATUS, bitacoraTaskStatusKey, dueSemaphore } from "@/lib/status";
 import { BitacoraTaskDrawer } from "@/components/bitacoras/bitacora-task-drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
@@ -119,7 +119,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <h2 className="shrink-0 text-sm font-semibold">Mi trabajo</h2>
+        <h2 className="shrink-0 text-sm font-semibold">Bitácora</h2>
 
         <div className="flex flex-wrap items-center gap-2">
           <SegmentedControl
@@ -132,7 +132,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
           />
           {isAdmin && users.length > 0 && (
             <FilterDropdown
-              placeholder="Todos los responsables"
+              placeholder="Todos los encargados"
               value={selectedUserId}
               onChange={(v) => {
                 setSelectedUserId(v);
@@ -157,7 +157,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
               <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                 {new Date(task.due_date + "T00:00:00").toLocaleDateString("es-CO")}
               </span>
-              <StatusBadge status={task.status} map={BITACORA_TASK_STATUS} />
+              <StatusBadge status={bitacoraTaskStatusKey(task)} map={BITACORA_TASK_STATUS} />
               <button
                 onClick={() => setDrawerTaskId(task.id)}
                 className="rounded-md border border-border px-2 py-1 text-xs transition hover:bg-neutral-50"

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BitacorasPanel } from "@/components/overview/bitacoras-panel";
 import { MyTasksPanel } from "@/components/overview/my-tasks-panel";
 import { AgendaPanel } from "@/components/overview/agenda-panel";
 
@@ -32,14 +31,7 @@ export default function OverviewPage() {
 
   return (
     <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-h-0 flex-col gap-4">
-        <div className="min-h-0 flex-1">
-          <BitacorasPanel isAdmin={isAdmin} />
-        </div>
-        <div className="min-h-0 flex-1">
-          <MyTasksPanel currentUserId={user.id} isAdmin={isAdmin} />
-        </div>
-      </div>
+      <MyTasksPanel currentUserId={user.id} isAdmin={isAdmin} />
       <AgendaPanel userId={user.id} />
     </div>
   );
