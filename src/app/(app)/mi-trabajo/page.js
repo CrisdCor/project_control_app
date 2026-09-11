@@ -5,9 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
 import { BITACORA_STATUS, bitacoraStatusKey, dueSemaphore } from "@/lib/status";
+import { fetchUrgentActivityBitacoraIds } from "@/lib/bitacoras";
 import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { AlertIcon } from "@/components/icons";
 
 const PAGE_SIZE = 10;
 
@@ -26,6 +28,7 @@ export default function MiTrabajoPage() {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [ready, setReady] = useState(false);
   const [bitacoras, setBitacoras] = useState([]);
+  const [urgentIds, setUrgentIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("todas");
   const [hideFinished, setHideFinished] = useState(false);
@@ -66,6 +69,7 @@ export default function MiTrabajoPage() {
     if (selectedUserId === currentUserId) {
       const { data } = await supabase.from("v_bitacora_status").select("*");
       setBitacoras(data ?? []);
+      setUrgentIds(await fetchUrgentActivityBitacoraIds(supabase, (data ?? []).map((b) => b.id)));
       setLoading(false);
       return;
     }
@@ -89,12 +93,14 @@ export default function MiTrabajoPage() {
 
     if (ids.length === 0) {
       setBitacoras([]);
+      setUrgentIds(new Set());
       setLoading(false);
       return;
     }
 
     const { data } = await supabase.from("v_bitacora_status").select("*").in("id", ids);
     setBitacoras(data ?? []);
+    setUrgentIds(await fetchUrgentActivityBitacoraIds(supabase, ids));
     setLoading(false);
   }
 
@@ -185,6 +191,14 @@ export default function MiTrabajoPage() {
               <div key={b.id} className="flex items-center gap-3 py-3">
                 <DueDot color={dueSemaphore(b.due_date, { done: b.status === "finalizado" })} />
                 <span className="min-w-0 flex-1 truncate text-sm">{b.name}</span>
+                {urgentIds.has(b.id) && (
+                  <span
+                    title="Tiene una actividad que vence hoy o ya está vencida"
+                    className="shrink-0 text-status-overdue"
+                  >
+                    <AlertIcon />
+                  </span>
+                )}
                 <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                   {new Date(b.due_date + "T00:00:00").toLocaleDateString("es-CO")}
                 </span>

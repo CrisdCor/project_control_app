@@ -50,6 +50,14 @@ export function ClockIcon({ className = "" }) {
   );
 }
 
+export function AlertIcon({ className = "" }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2 1 21h22L12 2Zm0 6.5c.55 0 1 .45 1 1v5a1 1 0 1 1-2 0v-5c0-.55.45-1 1-1Zm0 9.25a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3Z" />
+    </svg>
+  );
+}
+
 export function GripIcon({ className = "" }) {
   return (
     <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="currentColor">

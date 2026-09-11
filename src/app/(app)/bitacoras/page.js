@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { BITACORA_STATUS, bitacoraStatusKey, dueSemaphore } from "@/lib/status";
+import { fetchUrgentActivityBitacoraIds } from "@/lib/bitacoras";
 import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, AlertIcon } from "@/components/icons";
 
 export default function BitacorasPage() {
   const [isAdmin, setIsAdmin] = useState(null);
   const [bitacoras, setBitacoras] = useState([]);
+  const [urgentIds, setUrgentIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [drawerId, setDrawerId] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -47,6 +49,7 @@ export default function BitacorasPage() {
       });
 
     setBitacoras(sorted);
+    setUrgentIds(await fetchUrgentActivityBitacoraIds(supabase, rows.map((b) => b.id)));
     setLoading(false);
   }
 
@@ -107,8 +110,16 @@ export default function BitacorasPage() {
               {bitacoras.map((b) => (
                 <tr key={b.id} className="border-b border-border last:border-0">
                   <td className="px-5 py-3">
-                    <button onClick={() => setDrawerId(b.id)} className="font-medium hover:underline">
+                    <button onClick={() => setDrawerId(b.id)} className="flex items-center gap-1.5 font-medium hover:underline">
                       {b.name}
+                      {urgentIds.has(b.id) && (
+                        <span
+                          title="Tiene una actividad que vence hoy o ya está vencida"
+                          className="text-status-overdue"
+                        >
+                          <AlertIcon />
+                        </span>
+                      )}
                     </button>
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{b.encargadoName}</td>
