@@ -37,6 +37,13 @@ export function BitacoraDetailPanel({ bitacoraId, onSaved, onClose, backLabel = 
   const [activityError, setActivityError] = useState(null);
   const [observationsDraft, setObservationsDraft] = useState({});
 
+  const [editingActivityId, setEditingActivityId] = useState(null);
+  const [editDetail, setEditDetail] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editAssignee, setEditAssignee] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState(null);
+
   async function load() {
     setLoading(true);
     setError(null);
@@ -67,7 +74,7 @@ export function BitacoraDetailPanel({ bitacoraId, onSaved, onClose, backLabel = 
         .from("bitacora_activities")
         .select("*")
         .eq("bitacora_id", bitacoraId)
-        .order("created_at");
+        .order("due_date");
       setActivities(acts ?? []);
       setObservationsDraft(Object.fromEntries((acts ?? []).map((a) => [a.id, a.observations ?? ""])));
       setActivityDueDate(b?.due_date ?? "");
@@ -101,7 +108,7 @@ export function BitacoraDetailPanel({ bitacoraId, onSaved, onClose, backLabel = 
       .from("bitacora_activities")
       .select("*")
       .eq("bitacora_id", bitacoraId)
-      .order("created_at");
+      .order("due_date");
     setActivities(acts ?? []);
     setObservationsDraft(Object.fromEntries((acts ?? []).map((a) => [a.id, a.observations ?? ""])));
   }
@@ -239,6 +246,36 @@ export function BitacoraDetailPanel({ bitacoraId, onSaved, onClose, backLabel = 
   async function handleDeleteActivity(activity) {
     const supabase = createClient();
     await supabase.from("bitacora_activities").delete().eq("id", activity.id);
+    reloadActivities();
+  }
+
+  function startEditActivity(activity) {
+    setEditingActivityId(activity.id);
+    setEditDetail(activity.detail);
+    setEditDueDate(activity.due_date);
+    setEditAssignee(activity.assigned_to ?? "");
+    setEditError(null);
+  }
+
+  async function saveEditActivity(e) {
+    e.preventDefault();
+    setEditError(null);
+    if (!editDetail.trim()) return;
+    if (!editAssignee) return setEditError("Selecciona un responsable para la actividad.");
+    if (!editDueDate) return setEditError("La fecha límite de la actividad es obligatoria.");
+
+    setEditSaving(true);
+    const supabase = createClient();
+    const { error: updateError } = await supabase
+      .from("bitacora_activities")
+      .update({ detail: editDetail.trim(), due_date: editDueDate, assigned_to: editAssignee })
+      .eq("id", editingActivityId);
+    setEditSaving(false);
+    if (updateError) {
+      setEditError("No se pudo guardar. Verifica que la fecha no sea posterior a la de la bitácora.");
+      return;
+    }
+    setEditingActivityId(null);
     reloadActivities();
   }
 
@@ -392,6 +429,52 @@ export function BitacoraDetailPanel({ bitacoraId, onSaved, onClose, backLabel = 
                   <div className="mb-4 flex flex-col gap-2">
                     {activities.map((activity) => {
                       const editable = canTouchActivity(activity);
+
+                      if (editingActivityId === activity.id) {
+                        return (
+                          <form
+                            key={activity.id}
+                            onSubmit={saveEditActivity}
+                            className="flex flex-col gap-2 rounded-md border border-border bg-neutral-50 p-2.5"
+                          >
+                            <textarea
+                              value={editDetail}
+                              onChange={(e) => setEditDetail(e.target.value)}
+                              rows={2}
+                              className="rounded-md border border-border bg-white px-2.5 py-1.5 text-sm outline-none focus:border-foreground"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <div className="min-w-[160px] flex-1">
+                                <MultiSelectDropdown
+                                  options={profiles.map((p) => ({ id: p.id, name: p.name }))}
+                                  selectedIds={editAssignee ? [editAssignee] : []}
+                                  onChange={(ids) => setEditAssignee(ids[ids.length - 1] ?? "")}
+                                  placeholder="Responsable de la actividad"
+                                />
+                              </div>
+                              <DatePicker value={editDueDate} onChange={setEditDueDate} max={dueDate} />
+                            </div>
+                            {editError && <p className="text-xs text-status-overdue">{editError}</p>}
+                            <div className="flex gap-2">
+                              <button
+                                type="submit"
+                                disabled={editSaving || !editDetail.trim()}
+                                className="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
+                              >
+                                Guardar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingActivityId(null)}
+                                className="rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-white"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </form>
+                        );
+                      }
+
                       return (
                         <div key={activity.id} className="rounded-md border border-border p-2.5">
                           <div className="flex items-start gap-2.5">
@@ -412,12 +495,20 @@ export function BitacoraDetailPanel({ bitacoraId, onSaved, onClose, backLabel = 
                               </p>
                             </div>
                             {canManageActivities && (
-                              <button
-                                onClick={() => handleDeleteActivity(activity)}
-                                className="shrink-0 text-xs text-muted-foreground transition hover:text-status-overdue"
-                              >
-                                Eliminar
-                              </button>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <button
+                                  onClick={() => startEditActivity(activity)}
+                                  className="text-xs text-muted-foreground transition hover:text-foreground"
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteActivity(activity)}
+                                  className="text-xs text-muted-foreground transition hover:text-status-overdue"
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
                             )}
                           </div>
 
