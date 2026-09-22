@@ -38,18 +38,29 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
     let bitacoraQuery = myBitacoraIds.length
       ? supabase.from("v_bitacora_status").select("*").in("id", myBitacoraIds).neq("status", "finalizado")
       : null;
+    // actividades (lista de chequeo dentro de una bitácora) asignadas a mí — tienen
+    // su propia fecha límite, que puede ser muy distinta a la de la bitácora que
+    // las contiene, así que se consultan aparte
+    let activityQuery = supabase
+      .from("bitacora_activities")
+      .select("*, bitacoras(name, pais_id)")
+      .eq("assigned_to", userId)
+      .eq("is_done", false);
 
     if (isDefaultView) {
       agendaQuery = agendaQuery.lte("due_date", today);
       bitacoraQuery = bitacoraQuery?.lte("due_date", today) ?? null;
+      activityQuery = activityQuery.lte("due_date", today);
     } else {
       agendaQuery = agendaQuery.eq("due_date", selectedDate);
       bitacoraQuery = bitacoraQuery?.eq("due_date", selectedDate) ?? null;
+      activityQuery = activityQuery.eq("due_date", selectedDate);
     }
 
-    const [{ data: agendaRows }, bitacoraResult, { data: paisesData }] = await Promise.all([
+    const [{ data: agendaRows }, bitacoraResult, { data: activityRows }, { data: paisesData }] = await Promise.all([
       agendaQuery,
       bitacoraQuery ?? Promise.resolve({ data: [] }),
+      activityQuery,
       supabase.from("paises").select("*"),
     ]);
     const bitacoraRows = bitacoraResult.data;
@@ -70,8 +81,18 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
       due_date: b.due_date,
       pais_id: b.pais_id,
     }));
+    const actividades = (activityRows ?? []).map((a) => ({
+      kind: "actividad",
+      id: a.id,
+      title: a.detail,
+      due_date: a.due_date,
+      pais_id: a.bitacoras?.pais_id,
+      bitacoraId: a.bitacora_id,
+    }));
 
-    const merged = [...agenda, ...bitacoras].sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+    const merged = [...agenda, ...bitacoras, ...actividades].sort(
+      (a, b) => new Date(a.due_date) - new Date(b.due_date)
+    );
     setItems(merged);
     setLoading(false);
   }
@@ -90,6 +111,13 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
       .from("agenda_items")
       .update({ done: true, done_at: new Date().toISOString() })
       .eq("id", item.id);
+    onChanged?.();
+  }
+
+  async function toggleActividadDone(item) {
+    setItems((prev) => prev.filter((i) => !(i.kind === "actividad" && i.id === item.id)));
+    const supabase = createClient();
+    await supabase.from("bitacora_activities").update({ is_done: true }).eq("id", item.id);
     onChanged?.();
   }
 
@@ -165,6 +193,20 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
                     {item.title}
                   </button>
                 </>
+              ) : item.kind === "actividad" ? (
+                <>
+                  <input
+                    type="checkbox"
+                    onChange={() => toggleActividadDone(item)}
+                    className="h-4 w-4 shrink-0 accent-black"
+                  />
+                  <button
+                    onClick={() => setDrawerBitacoraId(item.bitacoraId)}
+                    className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
+                  >
+                    {item.title}
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={() => setDrawerBitacoraId(item.id)}
@@ -182,7 +224,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
               </span>
 
               <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                {item.kind === "agenda" ? "Agenda" : "Bitácora"}
+                {item.kind === "agenda" ? "Agenda" : item.kind === "actividad" ? "Actividad" : "Bitácora"}
               </span>
             </div>
           ))}

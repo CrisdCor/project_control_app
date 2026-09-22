@@ -52,7 +52,7 @@ export function WeekTasksStrip({ userId, selectedDate, onSelectDate, refreshSign
 
     const myBitacoraIds = await fetchMyBitacoraIds(supabase, userId);
 
-    const [{ data: agendaRows }, { data: bitacoraRows }] = await Promise.all([
+    const [{ data: agendaRows }, { data: bitacoraRows }, { data: activityRows }] = await Promise.all([
       supabase
         .from("agenda_items")
         .select("due_date")
@@ -69,6 +69,13 @@ export function WeekTasksStrip({ userId, selectedDate, onSelectDate, refreshSign
             .gte("due_date", startISO)
             .lte("due_date", endISO)
         : Promise.resolve({ data: [] }),
+      supabase
+        .from("bitacora_activities")
+        .select("due_date")
+        .eq("assigned_to", userId)
+        .eq("is_done", false)
+        .gte("due_date", startISO)
+        .lte("due_date", endISO),
     ]);
 
     const counts = {};
@@ -80,6 +87,9 @@ export function WeekTasksStrip({ userId, selectedDate, onSelectDate, refreshSign
     });
     (bitacoraRows ?? []).forEach((b) => {
       if (counts[b.due_date] !== undefined) counts[b.due_date] += 1;
+    });
+    (activityRows ?? []).forEach((a) => {
+      if (counts[a.due_date] !== undefined) counts[a.due_date] += 1;
     });
     setCountsByDate(counts);
   }
