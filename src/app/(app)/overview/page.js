@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { MyTasksPanel } from "@/components/overview/my-tasks-panel";
 import { AgendaPanel } from "@/components/overview/agenda-panel";
 import { TodayTasksPanel } from "@/components/overview/today-tasks-panel";
-import { SummaryCards } from "@/components/overview/summary-cards";
+import { WeekTasksStrip } from "@/components/overview/week-tasks-strip";
 
 export default function OverviewPage() {
   const [user, setUser] = useState(null);
@@ -33,7 +33,7 @@ export default function OverviewPage() {
 
   return (
     <div className="flex h-full flex-col gap-3">
-      <SummaryCards userId={user.id} />
+      <WeekTasksStrip userId={user.id} />
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-h-0 flex-col gap-3">
           <div className="min-h-0 flex-1">

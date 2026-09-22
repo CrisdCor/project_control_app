@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/status/status-badge";
 import { BITACORA_STATUS, bitacoraStatusKey } from "@/lib/status";
 import { CheckSquareIcon } from "@/components/icons";
 import { CountryTag } from "@/components/ui/country-tag";
+import { flagEmoji } from "@/lib/paises";
 
 function formatDate(d) {
   if (!d) return "";
@@ -471,7 +472,7 @@ export function BitacoraDetailPanel({
                       onChange={setPaisId}
                       options={paises.map((p) => ({
                         value: p.id,
-                        label: p.code ? `${p.code} — ${p.name}` : p.name,
+                        label: p.code ? `${flagEmoji(p.code)} ${p.code} — ${p.name}` : p.name,
                       }))}
                       disabled={!canEditDueDateEncargado}
                     />

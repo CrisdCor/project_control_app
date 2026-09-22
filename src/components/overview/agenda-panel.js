@@ -169,15 +169,14 @@ export function AgendaPanel({ userId }) {
           placeholder="Nueva tarea..."
           className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
         />
+        <DatePicker value={newDate} onChange={setNewDate} />
         <div className="flex gap-2">
           <div className="flex-1">
-            <DatePicker value={newDate} onChange={setNewDate} />
-          </div>
-          <div className="w-28">
             <FilterDropdown
               allowClear={false}
               value={newPaisId}
               onChange={setNewPaisId}
+              fullWidth
               options={paises.map((p) => ({
                 value: p.id,
                 label: p.code ? `${flagEmoji(p.code)} ${p.code}` : p.name,

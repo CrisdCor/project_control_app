@@ -84,6 +84,11 @@ export function PaisesModal({ open, onClose, onChanged }) {
             {paises.map((p) => (
               <div key={p.id} className="flex items-center gap-2.5 rounded-md border border-border p-2">
                 <span className="w-5 shrink-0 text-center">{flagEmoji(p.code) ?? "—"}</span>
+                {p.code && (
+                  <span className="shrink-0 text-xs font-semibold" style={{ color: p.color }}>
+                    {p.code}
+                  </span>
+                )}
                 <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
                 <input
                   type="color"
