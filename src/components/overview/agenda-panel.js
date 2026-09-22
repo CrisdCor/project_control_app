@@ -7,8 +7,11 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { agendaSemaphore } from "@/lib/status";
 import { PlusIcon, TrashIcon, CalendarIcon } from "@/components/icons";
 import { Tooltip } from "@/components/ui/tooltip";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { flagEmoji } from "@/lib/paises";
 
 const PAGE_SIZE = 15;
+const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -19,10 +22,14 @@ export function AgendaPanel({ userId }) {
   const [loading, setLoading] = useState(true);
   const [newText, setNewText] = useState("");
   const [newDate, setNewDate] = useState(todayISO());
+  const [newPaisId, setNewPaisId] = useState(GENERAL_PAIS_ID);
+  const [paises, setPaises] = useState([]);
+  const [paisesById, setPaisesById] = useState({});
   const [page, setPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [editPaisId, setEditPaisId] = useState(GENERAL_PAIS_ID);
   const [savingEdit, setSavingEdit] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
@@ -47,6 +54,13 @@ export function AgendaPanel({ userId }) {
 
     const { data } = await supabase.from("agenda_items").select("*").eq("user_id", userId);
     setItems(data ?? []);
+
+    if (!paises.length) {
+      const { data: paisesData } = await supabase.from("paises").select("*").order("name");
+      setPaises(paisesData ?? []);
+      setPaisesById(Object.fromEntries((paisesData ?? []).map((p) => [p.id, p])));
+    }
+
     setLoading(false);
   }
 
@@ -73,7 +87,7 @@ export function AgendaPanel({ userId }) {
     const supabase = createClient();
     const { data: created, error } = await supabase
       .from("agenda_items")
-      .insert({ user_id: userId, text: newText.trim(), due_date: newDate })
+      .insert({ user_id: userId, text: newText.trim(), due_date: newDate, pais_id: newPaisId })
       .select()
       .single();
     if (error) {
@@ -83,6 +97,7 @@ export function AgendaPanel({ userId }) {
     if (created) setItems((prev) => [...prev, created]);
     setNewText("");
     setNewDate(todayISO());
+    setNewPaisId(GENERAL_PAIS_ID);
   }
 
   async function toggleDone(item) {
@@ -105,6 +120,7 @@ export function AgendaPanel({ userId }) {
     setEditingItem(item);
     setEditText(item.text);
     setEditDate(item.due_date);
+    setEditPaisId(item.pais_id ?? GENERAL_PAIS_ID);
   }
 
   async function saveEdit(e) {
@@ -114,11 +130,12 @@ export function AgendaPanel({ userId }) {
     const previous = editingItem;
     const text = editText.trim();
     const due_date = editDate;
-    setItems((prev) => prev.map((i) => (i.id === editingItem.id ? { ...i, text, due_date } : i)));
+    const pais_id = editPaisId;
+    setItems((prev) => prev.map((i) => (i.id === editingItem.id ? { ...i, text, due_date, pais_id } : i)));
     const supabase = createClient();
     const { data, error } = await supabase
       .from("agenda_items")
-      .update({ text, due_date })
+      .update({ text, due_date, pais_id })
       .eq("id", editingItem.id)
       .select();
     setSavingEdit(false);
@@ -156,6 +173,17 @@ export function AgendaPanel({ userId }) {
           <div className="flex-1">
             <DatePicker value={newDate} onChange={setNewDate} />
           </div>
+          <div className="w-28">
+            <FilterDropdown
+              allowClear={false}
+              value={newPaisId}
+              onChange={setNewPaisId}
+              options={paises.map((p) => ({
+                value: p.id,
+                label: p.code ? `${flagEmoji(p.code)} ${p.code}` : p.name,
+              }))}
+            />
+          </div>
           <button
             type="submit"
             className="flex items-center gap-1 rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-800"
@@ -191,6 +219,11 @@ export function AgendaPanel({ userId }) {
                 {item.source_meeting_id && (
                   <span title="Proviene de una reunión" className="shrink-0 text-accent">
                     <CalendarIcon className="h-3.5 w-3.5" />
+                  </span>
+                )}
+                {paisesById[item.pais_id]?.code && (
+                  <span title={paisesById[item.pais_id].name} className="shrink-0">
+                    {flagEmoji(paisesById[item.pais_id].code)}
                   </span>
                 )}
                 <Tooltip
@@ -252,6 +285,15 @@ export function AgendaPanel({ userId }) {
                 className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
               />
               <DatePicker value={editDate} onChange={setEditDate} />
+              <FilterDropdown
+                allowClear={false}
+                value={editPaisId}
+                onChange={setEditPaisId}
+                options={paises.map((p) => ({
+                  value: p.id,
+                  label: p.code ? `${flagEmoji(p.code)} ${p.name}` : p.name,
+                }))}
+              />
               <div className="flex gap-2">
                 <button
                   type="submit"

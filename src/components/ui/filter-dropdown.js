@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDownIcon, CheckIcon } from "@/components/icons";
 
-export function FilterDropdown({ placeholder, value, options, onChange, allowClear = true, fullWidth = false }) {
+export function FilterDropdown({ placeholder, value, options, onChange, allowClear = true, fullWidth = false, disabled = false }) {
   const [open, setOpen] = useState(false);
   const [align, setAlign] = useState("left");
   const ref = useRef(null);
@@ -34,6 +34,7 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
     <div ref={ref} className={`relative ${fullWidth ? "w-full" : ""}`}>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => {
           const opening = !open;
           if (opening && ref.current) {
@@ -42,7 +43,7 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
           }
           setOpen(opening);
         }}
-        className={`flex items-center gap-2 rounded-md border border-border bg-white px-2.5 py-1.5 text-sm transition hover:bg-neutral-50 ${
+        className={`flex items-center gap-2 rounded-md border border-border bg-white px-2.5 py-1.5 text-sm transition hover:bg-neutral-50 disabled:bg-neutral-50 disabled:text-muted-foreground disabled:hover:bg-neutral-50 ${
           fullWidth ? "w-full justify-between" : ""
         }`}
       >
@@ -52,7 +53,7 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
         <ChevronDownIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       </button>
 
-      {open && (
+      {open && !disabled && (
         <div
           className={`absolute top-full z-20 mt-1.5 ${
             fullWidth ? "w-full" : "w-56"

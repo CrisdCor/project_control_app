@@ -8,6 +8,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { StatusBadge } from "@/components/status/status-badge";
 import { BITACORA_STATUS, bitacoraStatusKey } from "@/lib/status";
 import { CheckSquareIcon } from "@/components/icons";
+import { CountryTag } from "@/components/ui/country-tag";
 
 function formatDate(d) {
   if (!d) return "";
@@ -29,6 +30,7 @@ export function BitacoraDetailPanel({
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [profiles, setProfiles] = useState([]);
+  const [paises, setPaises] = useState([]);
   const [bitacora, setBitacora] = useState(null);
   const [activities, setActivities] = useState([]);
   const [checklistCounts, setChecklistCounts] = useState({});
@@ -39,6 +41,7 @@ export function BitacoraDetailPanel({
   const [name, setName] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [encargadoId, setEncargadoId] = useState("");
+  const [paisId, setPaisId] = useState("00000000-0000-0000-0000-000000000001");
 
   const [activityDetail, setActivityDetail] = useState("");
   const [activityDueDate, setActivityDueDate] = useState("");
@@ -96,6 +99,9 @@ export function BitacoraDetailPanel({
     const { data: allProfiles } = await supabase.from("profiles").select("id, name").order("name");
     setProfiles(allProfiles ?? []);
 
+    const { data: allPaises } = await supabase.from("paises").select("*").order("name");
+    setPaises(allPaises ?? []);
+
     if (!isCreate) {
       const { data: b } = await supabase.from("v_bitacora_status").select("*").eq("id", bitacoraId).maybeSingle();
       setBitacora(b);
@@ -103,6 +109,7 @@ export function BitacoraDetailPanel({
         setName(b.name);
         setDueDate(b.due_date);
         setEncargadoId(b.encargado_id ?? "");
+        setPaisId(b.pais_id ?? "00000000-0000-0000-0000-000000000001");
       }
 
       const { data: acts } = await supabase
@@ -166,6 +173,7 @@ export function BitacoraDetailPanel({
         name: name.trim(),
         due_date: dueDate,
         encargado_id: encargadoId,
+        pais_id: paisId,
         created_by: currentUserId,
       })
       .select()
@@ -194,6 +202,7 @@ export function BitacoraDetailPanel({
     if (isAdmin) {
       patch.due_date = dueDate;
       patch.encargado_id = encargadoId;
+      patch.pais_id = paisId;
     }
     const { error: updateError } = await supabase.from("bitacoras").update(patch).eq("id", bitacoraId);
 
@@ -411,7 +420,10 @@ export function BitacoraDetailPanel({
             <div className="flex flex-col gap-6">
               {!isCreate && bitacora && (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Fecha límite: {formatDate(bitacora.due_date)}</span>
+                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                    Fecha límite: {formatDate(bitacora.due_date)}
+                    <CountryTag pais={paises.find((p) => p.id === bitacora.pais_id)} />
+                  </span>
                   <StatusBadge status={bitacoraStatusKey(bitacora)} map={BITACORA_STATUS} />
                 </div>
               )}
@@ -448,6 +460,21 @@ export function BitacoraDetailPanel({
                     {!canEditDueDateEncargado && (
                       <p className="text-xs text-muted-foreground">Solo el administrador puede cambiar la fecha límite.</p>
                     )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium">País</label>
+                    <FilterDropdown
+                      placeholder="Selecciona un país"
+                      allowClear={false}
+                      value={paisId}
+                      onChange={setPaisId}
+                      options={paises.map((p) => ({
+                        value: p.id,
+                        label: p.code ? `${p.code} — ${p.name}` : p.name,
+                      }))}
+                      disabled={!canEditDueDateEncargado}
+                    />
                   </div>
 
                   {error && <p className="text-sm text-status-overdue">{error}</p>}

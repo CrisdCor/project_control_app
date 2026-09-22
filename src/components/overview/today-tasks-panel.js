@@ -7,6 +7,8 @@ import { dueSemaphore, agendaSemaphore } from "@/lib/status";
 import { DatePicker } from "@/components/ui/date-picker";
 import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
 import { fetchMyBitacoraIds } from "@/lib/bitacoras";
+import { flagEmoji } from "@/lib/paises";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { NotebookIcon, FolderIcon } from "@/components/icons";
 
 function todayISO() {
@@ -17,10 +19,12 @@ export function TodayTasksPanel({ userId }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawerBitacoraId, setDrawerBitacoraId] = useState(null);
+  const [paisesById, setPaisesById] = useState({});
 
   const [editingItem, setEditingItem] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [editPaisId, setEditPaisId] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
   async function load() {
@@ -30,7 +34,7 @@ export function TodayTasksPanel({ userId }) {
 
     const myBitacoraIds = await fetchMyBitacoraIds(supabase, userId);
 
-    const [{ data: agendaRows }, { data: bitacoraRows }] = await Promise.all([
+    const [{ data: agendaRows }, { data: bitacoraRows }, { data: paisesData }] = await Promise.all([
       supabase
         .from("agenda_items")
         .select("*")
@@ -45,19 +49,24 @@ export function TodayTasksPanel({ userId }) {
             .neq("status", "finalizado")
             .lte("due_date", today)
         : Promise.resolve({ data: [] }),
+      supabase.from("paises").select("*"),
     ]);
+
+    setPaisesById(Object.fromEntries((paisesData ?? []).map((p) => [p.id, p])));
 
     const agenda = (agendaRows ?? []).map((a) => ({
       kind: "agenda",
       id: a.id,
       title: a.text,
       due_date: a.due_date,
+      pais_id: a.pais_id,
     }));
     const bitacoras = (bitacoraRows ?? []).map((b) => ({
       kind: "bitacora",
       id: b.id,
       title: b.name,
       due_date: b.due_date,
+      pais_id: b.pais_id,
     }));
 
     const merged = [...agenda, ...bitacoras].sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
@@ -85,6 +94,7 @@ export function TodayTasksPanel({ userId }) {
     setEditingItem(item);
     setEditText(item.title);
     setEditDate(item.due_date);
+    setEditPaisId(item.pais_id ?? "00000000-0000-0000-0000-000000000001");
   }
 
   async function saveEditAgenda(e) {
@@ -94,7 +104,7 @@ export function TodayTasksPanel({ userId }) {
     const supabase = createClient();
     await supabase
       .from("agenda_items")
-      .update({ text: editText.trim(), due_date: editDate })
+      .update({ text: editText.trim(), due_date: editDate, pais_id: editPaisId })
       .eq("id", editingItem.id);
     setSavingEdit(false);
     setEditingItem(null);
@@ -119,6 +129,12 @@ export function TodayTasksPanel({ userId }) {
               >
                 {item.kind === "agenda" ? <NotebookIcon className="h-3.5 w-3.5" /> : <FolderIcon className="h-3.5 w-3.5" />}
               </span>
+
+              {paisesById[item.pais_id]?.code && (
+                <span title={paisesById[item.pais_id].name} className="shrink-0">
+                  {flagEmoji(paisesById[item.pais_id].code)}
+                </span>
+              )}
 
               <DueDot
                 color={item.kind === "agenda" ? agendaSemaphore(item.due_date) : dueSemaphore(item.due_date)}
@@ -181,6 +197,15 @@ export function TodayTasksPanel({ userId }) {
                 className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
               />
               <DatePicker value={editDate} onChange={setEditDate} />
+              <FilterDropdown
+                allowClear={false}
+                value={editPaisId}
+                onChange={setEditPaisId}
+                options={Object.values(paisesById).map((p) => ({
+                  value: p.id,
+                  label: p.code ? `${flagEmoji(p.code)} ${p.name}` : p.name,
+                }))}
+              />
               <div className="flex gap-2">
                 <button
                   type="submit"

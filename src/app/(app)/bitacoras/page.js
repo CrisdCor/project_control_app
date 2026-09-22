@@ -6,16 +6,20 @@ import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { BITACORA_STATUS, bitacoraStatusKey, dueSemaphore } from "@/lib/status";
 import { fetchUrgentActivityBitacoraIds } from "@/lib/bitacoras";
 import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
+import { PaisesModal } from "@/components/bitacoras/paises-modal";
+import { CountryTag } from "@/components/ui/country-tag";
 import { PlusIcon, TrashIcon, AlertIcon } from "@/components/icons";
 
 export default function BitacorasPage() {
   const [isAdmin, setIsAdmin] = useState(null);
   const [bitacoras, setBitacoras] = useState([]);
+  const [paisesById, setPaisesById] = useState({});
   const [urgentIds, setUrgentIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [drawerId, setDrawerId] = useState(null);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [paisesModalOpen, setPaisesModalOpen] = useState(false);
 
   async function load() {
     const supabase = createClient();
@@ -31,6 +35,9 @@ export default function BitacorasPage() {
 
     const { data } = await supabase.from("v_bitacora_status").select("*");
     const rows = data ?? [];
+
+    const { data: paises } = await supabase.from("paises").select("*");
+    setPaisesById(Object.fromEntries((paises ?? []).map((p) => [p.id, p])));
 
     const encargadoIds = [...new Set(rows.map((b) => b.encargado_id).filter(Boolean))];
     let nameMap = {};
@@ -80,13 +87,21 @@ export default function BitacorasPage() {
           Cada bitácora agrupa las actividades que se llevan a cabo para cumplirla.
         </p>
         {isAdmin && (
-          <button
-            onClick={() => setCreating(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"
-          >
-            <PlusIcon />
-            Nueva bitácora
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => setPaisesModalOpen(true)}
+              className="rounded-md border border-border px-3 py-2 text-sm transition hover:bg-neutral-50"
+            >
+              Países
+            </button>
+            <button
+              onClick={() => setCreating(true)}
+              className="flex items-center gap-1.5 rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"
+            >
+              <PlusIcon />
+              Nueva bitácora
+            </button>
+          </div>
         )}
       </div>
 
@@ -100,6 +115,7 @@ export default function BitacorasPage() {
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted-foreground">
                 <th className="px-5 py-3 font-medium">Bitácora</th>
+                <th className="px-5 py-3 font-medium">País</th>
                 <th className="px-5 py-3 font-medium">Encargado</th>
                 <th className="px-5 py-3 font-medium">Fecha límite</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
@@ -121,6 +137,9 @@ export default function BitacorasPage() {
                         </span>
                       )}
                     </button>
+                  </td>
+                  <td className="px-5 py-3">
+                    <CountryTag pais={paisesById[b.pais_id]} />
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{b.encargadoName}</td>
                   <td className="px-5 py-3 text-muted-foreground">
@@ -159,6 +178,7 @@ export default function BitacorasPage() {
         fullAccess
       />
       <BitacoraDrawer open={creating} onClose={() => setCreating(false)} bitacoraId={null} onSaved={load} fullAccess />
+      <PaisesModal open={paisesModalOpen} onClose={() => setPaisesModalOpen(false)} onChanged={load} />
     </div>
   );
 }
