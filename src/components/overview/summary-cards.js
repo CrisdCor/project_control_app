@@ -3,18 +3,24 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchMyBitacoraIds } from "@/lib/bitacoras";
+import { NotebookIcon, FolderIcon } from "@/components/icons";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function Card({ label, value, color }) {
+function Card({ icon, iconTitle, label, value, color }) {
   return (
-    <div className="flex flex-1 flex-col gap-1 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 shadow-sm">
-      <span className="text-xl font-semibold" style={color ? { color } : undefined}>
-        {value}
+    <div className="flex flex-1 items-center gap-2 rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2 shadow-sm">
+      <span title={iconTitle} className="shrink-0 text-muted-foreground">
+        {icon}
       </span>
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 flex-col">
+        <span className="text-base font-semibold leading-tight" style={color ? { color } : undefined}>
+          {value}
+        </span>
+        <span className="truncate text-[11px] leading-tight text-muted-foreground">{label}</span>
+      </div>
     </div>
   );
 }
@@ -55,18 +61,49 @@ export function SummaryCards({ userId }) {
   if (!stats) return null;
 
   return (
-    <div className="flex shrink-0 flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
-        <Card label="Agenda vencidas" value={stats.agendaVencidas} color="var(--color-status-overdue)" />
-        <Card label="Agenda para hoy" value={stats.agendaHoy} color="var(--color-status-progress)" />
-        <Card label="Agenda — total" value={stats.agendaTotal} />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Card label="Bitácoras abiertas" value={stats.bitacorasAbiertas} />
-        <Card label="Bitácoras vencidas" value={stats.bitacorasVencidas} color="var(--color-status-overdue)" />
-        <Card label="Bitácoras para hoy" value={stats.bitacorasHoy} color="var(--color-status-progress)" />
-        <Card label="Bitácoras finalizadas" value={stats.bitacorasFinalizadas} color="var(--color-status-done)" />
-      </div>
+    <div className="flex shrink-0 flex-wrap gap-2">
+      <Card
+        icon={<NotebookIcon className="h-3.5 w-3.5" />}
+        iconTitle="Agenda"
+        label="Vencidas"
+        value={stats.agendaVencidas}
+        color="var(--color-status-overdue)"
+      />
+      <Card
+        icon={<NotebookIcon className="h-3.5 w-3.5" />}
+        iconTitle="Agenda"
+        label="Hoy"
+        value={stats.agendaHoy}
+        color="var(--color-status-progress)"
+      />
+      <Card icon={<NotebookIcon className="h-3.5 w-3.5" />} iconTitle="Agenda" label="Total" value={stats.agendaTotal} />
+      <Card
+        icon={<FolderIcon className="h-3.5 w-3.5" />}
+        iconTitle="Bitácoras"
+        label="Abiertas"
+        value={stats.bitacorasAbiertas}
+      />
+      <Card
+        icon={<FolderIcon className="h-3.5 w-3.5" />}
+        iconTitle="Bitácoras"
+        label="Vencidas"
+        value={stats.bitacorasVencidas}
+        color="var(--color-status-overdue)"
+      />
+      <Card
+        icon={<FolderIcon className="h-3.5 w-3.5" />}
+        iconTitle="Bitácoras"
+        label="Hoy"
+        value={stats.bitacorasHoy}
+        color="var(--color-status-progress)"
+      />
+      <Card
+        icon={<FolderIcon className="h-3.5 w-3.5" />}
+        iconTitle="Bitácoras"
+        label="Finalizadas"
+        value={stats.bitacorasFinalizadas}
+        color="var(--color-status-done)"
+      />
     </div>
   );
 }
