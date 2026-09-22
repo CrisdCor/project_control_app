@@ -9,7 +9,7 @@ import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
 import { fetchMyBitacoraIds } from "@/lib/bitacoras";
 import { flagEmoji } from "@/lib/paises";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
-import { NotebookIcon, FolderIcon } from "@/components/icons";
+import { CountryCodeTag } from "@/components/ui/country-tag";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -146,18 +146,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
         <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
           {items.map((item) => (
             <div key={`${item.kind}-${item.id}`} className="flex items-center gap-2.5 py-2">
-              <span
-                title={item.kind === "agenda" ? "Tarea de agenda" : "Bitácora"}
-                className="shrink-0 text-muted-foreground"
-              >
-                {item.kind === "agenda" ? <NotebookIcon className="h-3.5 w-3.5" /> : <FolderIcon className="h-3.5 w-3.5" />}
-              </span>
-
-              {paisesById[item.pais_id]?.code && (
-                <span title={paisesById[item.pais_id].name} className="shrink-0">
-                  {flagEmoji(paisesById[item.pais_id].code)}
-                </span>
-              )}
+              <CountryCodeTag pais={paisesById[item.pais_id]} />
 
               <DueDot
                 color={item.kind === "agenda" ? agendaSemaphore(item.due_date) : dueSemaphore(item.due_date)}
@@ -192,6 +181,10 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
                   day: "2-digit",
                   month: "2-digit",
                 })}
+              </span>
+
+              <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {item.kind === "agenda" ? "Agenda" : "Bitácora"}
               </span>
             </div>
           ))}

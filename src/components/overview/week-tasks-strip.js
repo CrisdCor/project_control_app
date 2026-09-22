@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchMyBitacoraIds } from "@/lib/bitacoras";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 
-const DAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"];
+const DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -146,7 +146,7 @@ export function WeekTasksStrip({ userId, selectedDate, onSelectDate }) {
               <button
                 key={iso}
                 onClick={() => onSelectDate(iso)}
-                className={`flex flex-col items-center gap-0.5 rounded-md border py-1.5 transition ${
+                className={`flex flex-col items-center gap-1 rounded-md border py-2.5 transition ${
                   isToday
                     ? "border-foreground bg-foreground text-white"
                     : isSelected
@@ -154,13 +154,12 @@ export function WeekTasksStrip({ userId, selectedDate, onSelectDate }) {
                       : "border-border bg-white hover:bg-neutral-50"
                 }`}
               >
-                <span className="text-xs font-semibold leading-tight">{DAY_LETTERS[i]}</span>
-                <span className={`text-[10px] leading-tight ${isToday ? "text-white/80" : "text-muted-foreground"}`}>
-                  {d.getDate()}
+                <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide leading-tight">
+                  {DAY_NAMES[i]} - {d.getDate()}
                 </span>
                 <span
-                  className={`min-w-[16px] rounded-full px-1 text-center text-[9px] font-medium leading-tight ${
-                    count === 0 ? "invisible" : isToday ? "bg-white text-foreground" : "bg-neutral-900 text-white"
+                  className={`text-2xl font-bold leading-none ${
+                    count === 0 ? (isToday ? "text-white/50" : "text-neutral-300") : ""
                   }`}
                 >
                   {count}

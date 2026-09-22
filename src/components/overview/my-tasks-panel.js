@@ -10,7 +10,7 @@ import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { AlertIcon } from "@/components/icons";
-import { flagEmoji } from "@/lib/paises";
+import { CountryCodeTag } from "@/components/ui/country-tag";
 
 const PAGE_SIZE = 5;
 
@@ -169,11 +169,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
           {pageItems.map((b) => (
             <div key={b.id} className="flex items-center gap-3 py-2">
               <DueDot color={dueSemaphore(b.due_date)} />
-              {paisesById[b.pais_id]?.code && (
-                <span title={paisesById[b.pais_id].name} className="shrink-0">
-                  {flagEmoji(paisesById[b.pais_id].code)}
-                </span>
-              )}
+              <CountryCodeTag pais={paisesById[b.pais_id]} />
               <span className="min-w-0 flex-1 truncate text-sm">{b.name}</span>
               {urgentIds.has(b.id) && (
                 <span

@@ -9,6 +9,7 @@ import { PlusIcon, TrashIcon, CalendarIcon } from "@/components/icons";
 import { Tooltip } from "@/components/ui/tooltip";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { flagEmoji } from "@/lib/paises";
+import { CountryCodeTag } from "@/components/ui/country-tag";
 
 const PAGE_SIZE = 15;
 const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
@@ -220,11 +221,7 @@ export function AgendaPanel({ userId }) {
                     <CalendarIcon className="h-3.5 w-3.5" />
                   </span>
                 )}
-                {paisesById[item.pais_id]?.code && (
-                  <span title={paisesById[item.pais_id].name} className="shrink-0">
-                    {flagEmoji(paisesById[item.pais_id].code)}
-                  </span>
-                )}
+                <CountryCodeTag pais={paisesById[item.pais_id]} />
                 <Tooltip
                   className="min-w-0 flex-1"
                   content={
