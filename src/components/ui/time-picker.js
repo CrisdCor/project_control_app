@@ -58,7 +58,7 @@ export function TimePicker({ value, onChange, placeholder = "Hora", disabled = f
 
       {open && !disabled && (
         <div
-          className={`absolute top-full z-30 mt-1.5 flex w-44 animate-fade-in overflow-hidden rounded-xl border border-border bg-white shadow-lg ${
+          className={`absolute top-full z-30 mt-1.5 flex w-44 animate-fade-in overflow-hidden rounded-lg border border-border bg-white shadow-lg ${
             align === "right" ? "right-0" : "left-0"
           }`}
         >

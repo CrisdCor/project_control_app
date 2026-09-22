@@ -56,7 +56,7 @@ export function FilterDropdown({ placeholder, value, options, onChange, allowCle
         <div
           className={`absolute top-full z-20 mt-1.5 ${
             fullWidth ? "w-full" : "w-56"
-          } animate-fade-in overflow-hidden rounded-xl border border-border bg-white py-1.5 shadow-lg ${
+          } animate-fade-in overflow-hidden rounded-lg border border-border bg-white py-1.5 shadow-lg ${
             align === "right" ? "right-0" : "left-0"
           }`}
         >

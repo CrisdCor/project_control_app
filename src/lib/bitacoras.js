@@ -2,6 +2,23 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Bitácoras donde el usuario es encargado o tiene alguna actividad asignada.
+// Se usa de forma explícita (en vez de confiar solo en RLS) porque para el admin
+// las políticas de seguridad devuelven TODAS las bitácoras a propósito — y estas
+// vistas son de uso personal, deben reflejar solo lo propio incluso siendo admin.
+export async function fetchMyBitacoraIds(supabase, userId) {
+  const [{ data: encargadoRows }, { data: activityRows }] = await Promise.all([
+    supabase.from("bitacoras").select("id").eq("encargado_id", userId),
+    supabase.from("bitacora_activities").select("bitacora_id").eq("assigned_to", userId),
+  ]);
+  return [
+    ...new Set([
+      ...(encargadoRows ?? []).map((r) => r.id),
+      ...(activityRows ?? []).map((r) => r.bitacora_id),
+    ]),
+  ];
+}
+
 // De un conjunto de bitácoras visibles, cuáles tienen al menos una actividad
 // sin terminar que vence hoy o ya está vencida (útil para señalizarlo en listas
 // compactas, sin tener que entrar al detalle de cada una).

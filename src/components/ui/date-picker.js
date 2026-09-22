@@ -97,7 +97,7 @@ export function DatePicker({ value, onChange, min, max, placeholder = "Seleccion
 
       {open && !disabled && (
         <div
-          className={`absolute top-full z-30 mt-1.5 w-72 animate-fade-in rounded-xl border border-border bg-white p-3 shadow-lg ${
+          className={`absolute top-full z-30 mt-1.5 w-72 animate-fade-in rounded-lg border border-border bg-white p-3 shadow-lg ${
             align === "right" ? "right-0" : "left-0"
           }`}
         >

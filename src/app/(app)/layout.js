@@ -27,7 +27,7 @@ export default async function AppLayout({ children }) {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar profile={profile} />
         <main className="flex-1 overflow-y-auto">
-          <div className="content-max h-full px-6 py-5">{children}</div>
+          <div className="content-max h-full px-5 py-4">{children}</div>
         </main>
       </div>
     </div>

@@ -271,7 +271,7 @@ export default function ReunionDetallePage() {
   const scheduledItems = items.filter((i) => i.converted_to === "agenda");
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full flex-col gap-3">
       <div className="flex shrink-0 items-center justify-between">
         <Link href="/reuniones" className="text-sm text-muted-foreground hover:underline">
           ← Reuniones
@@ -402,7 +402,7 @@ export default function ReunionDetallePage() {
       </div>
 
       {/* Compromisos + agenda */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex min-h-0 flex-col rounded-[var(--radius-card)] border border-border bg-surface shadow-sm">
           <form onSubmit={handleAddItem} className="flex shrink-0 flex-col gap-2 border-b border-border p-4">
             <textarea

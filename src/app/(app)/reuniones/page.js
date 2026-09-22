@@ -60,7 +60,7 @@ export default function ReunionesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Registra reuniones y agenda sus tareas directamente en el calendario de cada participante.

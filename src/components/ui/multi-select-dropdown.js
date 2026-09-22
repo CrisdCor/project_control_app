@@ -61,7 +61,7 @@ export function MultiSelectDropdown({ options, selectedIds, onChange, placeholde
 
       {open && !disabled && (
         <div
-          className={`absolute top-full z-30 mt-1.5 w-full min-w-[220px] animate-fade-in overflow-hidden rounded-xl border border-border bg-white py-1.5 shadow-lg ${
+          className={`absolute top-full z-30 mt-1.5 w-full min-w-[220px] animate-fade-in overflow-hidden rounded-lg border border-border bg-white py-1.5 shadow-lg ${
             align === "right" ? "right-0" : "left-0"
           }`}
         >
