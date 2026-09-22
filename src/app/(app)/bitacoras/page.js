@@ -151,8 +151,14 @@ export default function BitacorasPage() {
         )}
       </div>
 
-      <BitacoraDrawer open={Boolean(drawerId)} onClose={() => setDrawerId(null)} bitacoraId={drawerId} onSaved={load} />
-      <BitacoraDrawer open={creating} onClose={() => setCreating(false)} bitacoraId={null} onSaved={load} />
+      <BitacoraDrawer
+        open={Boolean(drawerId)}
+        onClose={() => setDrawerId(null)}
+        bitacoraId={drawerId}
+        onSaved={load}
+        fullAccess
+      />
+      <BitacoraDrawer open={creating} onClose={() => setCreating(false)} bitacoraId={null} onSaved={load} fullAccess />
     </div>
   );
 }

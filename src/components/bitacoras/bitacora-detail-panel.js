@@ -14,8 +14,16 @@ function formatDate(d) {
   return new Date(d + "T00:00:00").toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" });
 }
 
-export function BitacoraDetailPanel({ bitacoraId, onSaved, onClose, backLabel = "✕", closeOnSave = false }) {
+export function BitacoraDetailPanel({
+  bitacoraId,
+  onSaved,
+  onClose,
+  backLabel = "✕",
+  closeOnSave = false,
+  fullAccess = false,
+}) {
   const isCreate = !bitacoraId;
+  const showFieldsForm = isCreate || fullAccess;
 
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -408,51 +416,53 @@ export function BitacoraDetailPanel({ bitacoraId, onSaved, onClose, backLabel = 
                 </div>
               )}
 
-              <form onSubmit={isCreate ? handleCreate : handleSaveCore} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Bitácora</label>
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    disabled={!canEditName}
-                    className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
-                  />
-                </div>
+              {showFieldsForm && (
+                <form onSubmit={isCreate ? handleCreate : handleSaveCore} className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium">Bitácora</label>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      disabled={!canEditName}
+                      className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground disabled:bg-neutral-50 disabled:text-muted-foreground"
+                    />
+                  </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Encargado</label>
-                  <FilterDropdown
-                    placeholder="Selecciona un encargado"
-                    allowClear={false}
-                    value={encargadoId}
-                    onChange={setEncargadoId}
-                    options={profiles.map((p) => ({ value: p.id, label: p.name }))}
-                  />
-                  {!canEditDueDateEncargado && (
-                    <p className="text-xs text-muted-foreground">Solo el administrador puede reasignar el encargado.</p>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium">Encargado</label>
+                    <FilterDropdown
+                      placeholder="Selecciona un encargado"
+                      allowClear={false}
+                      value={encargadoId}
+                      onChange={setEncargadoId}
+                      options={profiles.map((p) => ({ value: p.id, label: p.name }))}
+                    />
+                    {!canEditDueDateEncargado && (
+                      <p className="text-xs text-muted-foreground">Solo el administrador puede reasignar el encargado.</p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium">Fecha límite</label>
+                    <DatePicker value={dueDate} onChange={setDueDate} disabled={!canEditDueDateEncargado} />
+                    {!canEditDueDateEncargado && (
+                      <p className="text-xs text-muted-foreground">Solo el administrador puede cambiar la fecha límite.</p>
+                    )}
+                  </div>
+
+                  {error && <p className="text-sm text-status-overdue">{error}</p>}
+
+                  {(isCreate || canEditName) && (
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="self-start rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
+                    >
+                      {saving ? "Guardando..." : isCreate ? "Crear bitácora" : "Guardar cambios"}
+                    </button>
                   )}
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">Fecha límite</label>
-                  <DatePicker value={dueDate} onChange={setDueDate} disabled={!canEditDueDateEncargado} />
-                  {!canEditDueDateEncargado && (
-                    <p className="text-xs text-muted-foreground">Solo el administrador puede cambiar la fecha límite.</p>
-                  )}
-                </div>
-
-                {error && <p className="text-sm text-status-overdue">{error}</p>}
-
-                {(isCreate || canEditName) && (
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="self-start rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
-                  >
-                    {saving ? "Guardando..." : isCreate ? "Crear bitácora" : "Guardar cambios"}
-                  </button>
-                )}
-              </form>
+                </form>
+              )}
 
               {!isCreate && (canFinish || (isAdmin && bitacora?.completed_at)) && (
                 <div className="rounded-md border border-border p-4">
@@ -682,7 +692,7 @@ export function BitacoraDetailPanel({ bitacoraId, onSaved, onClose, backLabel = 
                 </div>
               )}
 
-              {!isCreate && isAdmin && (
+              {!isCreate && isAdmin && fullAccess && (
                 <div className="rounded-md border border-status-overdue/40 p-4">
                   <h3 className="mb-2 text-sm font-semibold text-status-overdue">Eliminar bitácora</h3>
                   <p className="mb-3 text-sm text-muted-foreground">
