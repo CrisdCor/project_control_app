@@ -8,17 +8,13 @@ import { agendaSemaphore } from "@/lib/status";
 import { PlusIcon, TrashIcon, CalendarIcon } from "@/components/icons";
 import { Tooltip } from "@/components/ui/tooltip";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
-import { flagEmoji } from "@/lib/paises";
 import { CountryCodeTag } from "@/components/ui/country-tag";
+import { localTodayISO as todayISO } from "@/lib/dates";
 
 const PAGE_SIZE = 15;
 const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export function AgendaPanel({ userId }) {
+export function AgendaPanel({ userId, refreshSignal, onChanged }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newText, setNewText] = useState("");
@@ -70,7 +66,7 @@ export function AgendaPanel({ userId }) {
       await load();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, refreshSignal]);
 
   const sorted = useMemo(() => {
     return [...items].sort((a, b) => {
@@ -99,6 +95,7 @@ export function AgendaPanel({ userId }) {
     setNewText("");
     setNewDate(todayISO());
     setNewPaisId(GENERAL_PAIS_ID);
+    onChanged?.();
   }
 
   async function toggleDone(item) {
@@ -114,7 +111,9 @@ export function AgendaPanel({ userId }) {
     if (error || !data?.length) {
       setItems((prev) => prev.map((i) => (i.id === item.id ? item : i)));
       flashError("No se pudo actualizar la tarea. Intenta de nuevo.");
+      return;
     }
+    onChanged?.();
   }
 
   function startEdit(item) {
@@ -144,7 +143,9 @@ export function AgendaPanel({ userId }) {
     if (error || !data?.length) {
       setItems((prev) => prev.map((i) => (i.id === previous.id ? previous : i)));
       flashError("No se pudo guardar el cambio. Intenta de nuevo.");
+      return;
     }
+    onChanged?.();
   }
 
   async function handleDelete(item) {
@@ -154,7 +155,9 @@ export function AgendaPanel({ userId }) {
     if (error || !data?.length) {
       setItems((prev) => [...prev, item]);
       flashError("No se pudo eliminar la tarea. Intenta de nuevo.");
+      return;
     }
+    onChanged?.();
   }
 
   return (
@@ -180,7 +183,7 @@ export function AgendaPanel({ userId }) {
               fullWidth
               options={paises.map((p) => ({
                 value: p.id,
-                label: p.code ? `${flagEmoji(p.code)} ${p.code}` : p.name,
+                label: p.code ? `${p.code} · ${p.name}` : p.name,
               }))}
             />
           </div>
@@ -287,7 +290,7 @@ export function AgendaPanel({ userId }) {
                 onChange={setEditPaisId}
                 options={paises.map((p) => ({
                   value: p.id,
-                  label: p.code ? `${flagEmoji(p.code)} ${p.name}` : p.name,
+                  label: p.code ? `${p.code} · ${p.name}` : p.name,
                 }))}
               />
               <div className="flex gap-2">

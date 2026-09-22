@@ -9,10 +9,7 @@ import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { PlusIcon, GripIcon } from "@/components/icons";
 import { fetchOutstandingCommitments } from "@/lib/meetings";
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { localTodayISO as todayISO } from "@/lib/dates";
 
 export function MeetingFormModal({ open, onClose, profiles, pastMeetings, currentUserId, onCreated }) {
   const [title, setTitle] = useState("");
@@ -244,7 +241,7 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Reunión anterior relacionada (opcional)</label>
             <FilterDropdown
-              placeholder="Ninguna — reunión esporádica"
+              placeholder="Ninguna · reunión esporádica"
               value={previousMeetingId}
               onChange={setPreviousMeetingId}
               fullWidth

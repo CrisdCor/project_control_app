@@ -9,10 +9,7 @@ import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { MeetingChecklistDrawer } from "@/components/reuniones/meeting-checklist-drawer";
 import { TrashIcon, PencilIcon } from "@/components/icons";
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { localTodayISO as todayISO } from "@/lib/dates";
 
 const EXTERNAL_PREFIX = "ext:";
 

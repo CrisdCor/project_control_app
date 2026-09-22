@@ -22,7 +22,7 @@ const QUICK_FILTERS = [
   { id: "todas", label: "Todas" },
 ];
 
-export function MyTasksPanel({ currentUserId, isAdmin }) {
+export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged }) {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(currentUserId);
   const [bitacoras, setBitacoras] = useState([]);
@@ -100,7 +100,7 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
       await loadBitacoras();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedUserId]);
+  }, [selectedUserId, refreshSignal]);
 
   const visible = useMemo(() => {
     // finalizadas ocultas por defecto
@@ -202,7 +202,10 @@ export function MyTasksPanel({ currentUserId, isAdmin }) {
         open={Boolean(drawerId)}
         onClose={() => setDrawerId(null)}
         bitacoraId={drawerId}
-        onSaved={loadBitacoras}
+        onSaved={() => {
+          loadBitacoras();
+          onChanged?.();
+        }}
       />
     </section>
   );

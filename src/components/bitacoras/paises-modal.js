@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
-import { flagEmoji } from "@/lib/paises";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 
 export function PaisesModal({ open, onClose, onChanged }) {
@@ -83,9 +82,8 @@ export function PaisesModal({ open, onClose, onChanged }) {
           <div className="flex flex-col gap-1.5">
             {paises.map((p) => (
               <div key={p.id} className="flex items-center gap-2.5 rounded-md border border-border p-2">
-                <span className="w-5 shrink-0 text-center">{flagEmoji(p.code) ?? "—"}</span>
                 {p.code && (
-                  <span className="shrink-0 text-xs font-semibold" style={{ color: p.color }}>
+                  <span className="w-8 shrink-0 text-xs font-semibold" style={{ color: p.color }}>
                     {p.code}
                   </span>
                 )}

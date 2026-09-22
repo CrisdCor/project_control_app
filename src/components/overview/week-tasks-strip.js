@@ -4,15 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchMyBitacoraIds } from "@/lib/bitacoras";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import { localTodayISO as todayISO } from "@/lib/dates";
 
 const DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function toISO(d) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function mondayOf(date) {
@@ -37,7 +37,7 @@ function weekDates(weekOffset) {
 // Tira semanal compacta: solo selecciona el día y muestra un conteo. El detalle
 // de tareas de ese día se muestra en el panel "Tareas del día" (evita que esta
 // tira empuje al resto de contenedores hacia abajo al desplegar una lista).
-export function WeekTasksStrip({ userId, selectedDate, onSelectDate }) {
+export function WeekTasksStrip({ userId, selectedDate, onSelectDate, refreshSignal }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [animKey, setAnimKey] = useState(0);
   const [animDirection, setAnimDirection] = useState("right");
@@ -89,7 +89,7 @@ export function WeekTasksStrip({ userId, selectedDate, onSelectDate }) {
       await load();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekOffset, userId]);
+  }, [weekOffset, userId, refreshSignal]);
 
   function goPrev() {
     setAnimDirection("left");

@@ -1,6 +1,4 @@
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { localTodayISO as todayISO } from "@/lib/dates";
 
 // Bitácoras donde el usuario es encargado o tiene alguna actividad asignada.
 // Se usa de forma explícita (en vez de confiar solo en RLS) porque para el admin

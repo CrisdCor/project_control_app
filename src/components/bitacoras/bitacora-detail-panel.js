@@ -9,7 +9,6 @@ import { StatusBadge } from "@/components/status/status-badge";
 import { BITACORA_STATUS, bitacoraStatusKey } from "@/lib/status";
 import { CheckSquareIcon } from "@/components/icons";
 import { CountryTag } from "@/components/ui/country-tag";
-import { flagEmoji } from "@/lib/paises";
 
 function formatDate(d) {
   if (!d) return "";
@@ -472,7 +471,7 @@ export function BitacoraDetailPanel({
                       onChange={setPaisId}
                       options={paises.map((p) => ({
                         value: p.id,
-                        label: p.code ? `${flagEmoji(p.code)} ${p.code} — ${p.name}` : p.name,
+                        label: p.code ? `${p.code} · ${p.name}` : p.name,
                       }))}
                       disabled={!canEditDueDateEncargado}
                     />
@@ -510,7 +509,7 @@ export function BitacoraDetailPanel({
                   ) : bitacora?.completed_at ? (
                     <div className="flex flex-col gap-2 text-sm">
                       <p className="text-status-attention">
-                        Pendiente por aprobación — cerrada el{" "}
+                        Pendiente por aprobación · cerrada el{" "}
                         {new Date(bitacora.completed_at).toLocaleDateString("es-CO")}
                       </p>
                       <div className="flex gap-2">

@@ -7,15 +7,11 @@ import { dueSemaphore, agendaSemaphore } from "@/lib/status";
 import { DatePicker } from "@/components/ui/date-picker";
 import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
 import { fetchMyBitacoraIds } from "@/lib/bitacoras";
-import { flagEmoji } from "@/lib/paises";
-import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { CountryCodeTag } from "@/components/ui/country-tag";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { localTodayISO as todayISO } from "@/lib/dates";
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
+export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refreshSignal, onChanged }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawerBitacoraId, setDrawerBitacoraId] = useState(null);
@@ -85,7 +81,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
       await load();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, selectedDate]);
+  }, [userId, selectedDate, refreshSignal]);
 
   async function toggleAgendaDone(item) {
     setItems((prev) => prev.filter((i) => !(i.kind === "agenda" && i.id === item.id)));
@@ -94,6 +90,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
       .from("agenda_items")
       .update({ done: true, done_at: new Date().toISOString() })
       .eq("id", item.id);
+    onChanged?.();
   }
 
   function startEditAgenda(item) {
@@ -115,6 +112,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
     setSavingEdit(false);
     setEditingItem(null);
     load();
+    onChanged?.();
   }
 
   return (
@@ -123,7 +121,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
         <h2 className="text-sm font-semibold">
           {isDefaultView
             ? "Tareas del día"
-            : `Tareas — ${new Date(selectedDate + "T00:00:00").toLocaleDateString("es-CO", {
+            : `Tareas · ${new Date(selectedDate + "T00:00:00").toLocaleDateString("es-CO", {
                 weekday: "long",
                 day: "2-digit",
                 month: "long",
@@ -195,7 +193,10 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
         open={Boolean(drawerBitacoraId)}
         onClose={() => setDrawerBitacoraId(null)}
         bitacoraId={drawerBitacoraId}
-        onSaved={load}
+        onSaved={() => {
+          load();
+          onChanged?.();
+        }}
       />
 
       {editingItem && (
@@ -219,7 +220,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
                 onChange={setEditPaisId}
                 options={Object.values(paisesById).map((p) => ({
                   value: p.id,
-                  label: p.code ? `${flagEmoji(p.code)} ${p.name}` : p.name,
+                  label: p.code ? `${p.code} · ${p.name}` : p.name,
                 }))}
               />
               <div className="flex gap-2">

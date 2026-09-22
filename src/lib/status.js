@@ -1,5 +1,6 @@
-export const BITACORA_STATUS = {
-  pendiente_lejos: { label: "Pendiente", color: "var(--color-status-pending)" }, // gris: aún no vence
+import { localTodayISO } from "@/lib/dates";
+
+export const BITACORA_STATUS = {  pendiente_lejos: { label: "Pendiente", color: "var(--color-status-pending)" }, // gris: aún no vence
   pendiente_hoy: { label: "Pendiente", color: "var(--color-status-progress)" }, // azul: vence hoy
   vencido: { label: "Vencida", color: "var(--color-status-overdue)" },
   pendiente_aprobacion: { label: "Pendiente por aprobación", color: "var(--color-status-attention)" },
@@ -12,7 +13,7 @@ export function bitacoraStatusKey(bitacora) {
   if (bitacora.status === "finalizado") return "finalizado";
   if (bitacora.status === "pendiente_aprobacion") return "pendiente_aprobacion";
   if (bitacora.status === "vencido") return "vencido";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localTodayISO();
   return bitacora.due_date === today ? "pendiente_hoy" : "pendiente_lejos";
 }
 
