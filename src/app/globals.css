@@ -24,6 +24,8 @@
   --animate-fade-in: fade-in 200ms ease-out;
   --animate-slide-in-right: slide-in-right 260ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-slide-in-left: slide-in-left 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-week-slide-right: week-slide-right 750ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-week-slide-left: week-slide-left 750ms cubic-bezier(0.22, 1, 0.36, 1);
   --animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
   --animate-loading-pulse: loading-pulse 1.3s ease-in-out infinite;
 
@@ -48,6 +50,26 @@
   @keyframes slide-in-left {
     from {
       transform: translateX(-24px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes week-slide-right {
+    from {
+      transform: translateX(36px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes week-slide-left {
+    from {
+      transform: translateX(-36px);
       opacity: 0;
     }
     to {

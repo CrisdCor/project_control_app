@@ -15,7 +15,7 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function TodayTasksPanel({ userId }) {
+export function TodayTasksPanel({ userId, selectedDate, onClearSelection }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawerBitacoraId, setDrawerBitacoraId] = useState(null);
@@ -27,30 +27,36 @@ export function TodayTasksPanel({ userId }) {
   const [editPaisId, setEditPaisId] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
+  const today = todayISO();
+  // vista por defecto: hoy + vencidas. Si se eligió otro día en la tira semanal,
+  // se muestra únicamente ese día.
+  const isDefaultView = !selectedDate || selectedDate === today;
+
   async function load() {
     const supabase = createClient();
     setLoading(true);
-    const today = todayISO();
 
     const myBitacoraIds = await fetchMyBitacoraIds(supabase, userId);
 
-    const [{ data: agendaRows }, { data: bitacoraRows }, { data: paisesData }] = await Promise.all([
-      supabase
-        .from("agenda_items")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("done", false)
-        .lte("due_date", today),
-      myBitacoraIds.length
-        ? supabase
-            .from("v_bitacora_status")
-            .select("*")
-            .in("id", myBitacoraIds)
-            .neq("status", "finalizado")
-            .lte("due_date", today)
-        : Promise.resolve({ data: [] }),
+    let agendaQuery = supabase.from("agenda_items").select("*").eq("user_id", userId).eq("done", false);
+    let bitacoraQuery = myBitacoraIds.length
+      ? supabase.from("v_bitacora_status").select("*").in("id", myBitacoraIds).neq("status", "finalizado")
+      : null;
+
+    if (isDefaultView) {
+      agendaQuery = agendaQuery.lte("due_date", today);
+      bitacoraQuery = bitacoraQuery?.lte("due_date", today) ?? null;
+    } else {
+      agendaQuery = agendaQuery.eq("due_date", selectedDate);
+      bitacoraQuery = bitacoraQuery?.eq("due_date", selectedDate) ?? null;
+    }
+
+    const [{ data: agendaRows }, bitacoraResult, { data: paisesData }] = await Promise.all([
+      agendaQuery,
+      bitacoraQuery ?? Promise.resolve({ data: [] }),
       supabase.from("paises").select("*"),
     ]);
+    const bitacoraRows = bitacoraResult.data;
 
     setPaisesById(Object.fromEntries((paisesData ?? []).map((p) => [p.id, p])));
 
@@ -79,7 +85,7 @@ export function TodayTasksPanel({ userId }) {
       await load();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, selectedDate]);
 
   async function toggleAgendaDone(item) {
     setItems((prev) => prev.filter((i) => !(i.kind === "agenda" && i.id === item.id)));
@@ -113,12 +119,29 @@ export function TodayTasksPanel({ userId }) {
 
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
-      <h2 className="mb-3 shrink-0 text-sm font-semibold">Tareas del día</h2>
+      <div className="mb-3 flex shrink-0 items-center justify-between">
+        <h2 className="text-sm font-semibold">
+          {isDefaultView
+            ? "Tareas del día"
+            : `Tareas — ${new Date(selectedDate + "T00:00:00").toLocaleDateString("es-CO", {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+              })}`}
+        </h2>
+        {!isDefaultView && (
+          <button onClick={onClearSelection} className="text-xs text-accent transition hover:underline">
+            Volver a hoy
+          </button>
+        )}
+      </div>
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sin tareas vencidas ni para hoy. Vas al día.</p>
+        <p className="text-sm text-muted-foreground">
+          {isDefaultView ? "Sin tareas vencidas ni para hoy. Vas al día." : "Sin tareas programadas para este día."}
+        </p>
       ) : (
         <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
           {items.map((item) => (

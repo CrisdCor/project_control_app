@@ -10,6 +10,7 @@ import { WeekTasksStrip } from "@/components/overview/week-tasks-strip";
 export default function OverviewPage() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -33,11 +34,11 @@ export default function OverviewPage() {
 
   return (
     <div className="flex h-full flex-col gap-3">
-      <WeekTasksStrip userId={user.id} />
+      <WeekTasksStrip userId={user.id} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-h-0 flex-col gap-3">
           <div className="min-h-0 flex-1">
-            <TodayTasksPanel userId={user.id} />
+            <TodayTasksPanel userId={user.id} selectedDate={selectedDate} onClearSelection={() => setSelectedDate(null)} />
           </div>
           <div className="min-h-0 flex-1">
             <MyTasksPanel currentUserId={user.id} isAdmin={isAdmin} />
