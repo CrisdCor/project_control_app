@@ -53,7 +53,6 @@ export default function OverviewPage() {
               userId={user.id}
               selectedDate={selectedDate}
               onClearSelection={() => setSelectedDate(null)}
-              refreshSignal={refreshTick}
               onChanged={bumpRefresh}
             />
           </div>

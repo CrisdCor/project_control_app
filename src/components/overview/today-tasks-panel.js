@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DueDot } from "@/components/status/status-badge";
 import { dueSemaphore, agendaSemaphore } from "@/lib/status";
@@ -10,10 +10,13 @@ import { fetchMyBitacoraIds } from "@/lib/bitacoras";
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { localTodayISO as todayISO } from "@/lib/dates";
+import { RefreshIcon } from "@/components/icons";
 
-export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refreshSignal, onChanged }) {
+export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChanged }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const hasLoadedOnce = useRef(false);
   const [drawerBitacoraId, setDrawerBitacoraId] = useState(null);
   const [paisesById, setPaisesById] = useState({});
 
@@ -30,7 +33,14 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
 
   async function load() {
     const supabase = createClient();
-    setLoading(true);
+    // solo se muestra el estado "Cargando..." de pantalla completa la primera
+    // vez; las recargas posteriores (botón Actualizar, cambios propios) se
+    // hacen en silencio para no hacer parpadear el contenedor
+    if (!hasLoadedOnce.current) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
 
     const myBitacoraIds = await fetchMyBitacoraIds(supabase, userId);
 
@@ -95,6 +105,8 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
     );
     setItems(merged);
     setLoading(false);
+    setRefreshing(false);
+    hasLoadedOnce.current = true;
   }
 
   useEffect(() => {
@@ -102,7 +114,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
       await load();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, selectedDate, refreshSignal]);
+  }, [userId, selectedDate]);
 
   async function toggleAgendaDone(item) {
     setItems((prev) => prev.filter((i) => !(i.kind === "agenda" && i.id === item.id)));
@@ -145,7 +157,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
 
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
-      <div className="mb-3 flex shrink-0 items-center justify-between">
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">
           {isDefaultView
             ? "Tareas del día"
@@ -155,11 +167,21 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
                 month: "long",
               })}`}
         </h2>
-        {!isDefaultView && (
-          <button onClick={onClearSelection} className="text-xs text-accent transition hover:underline">
-            Volver a hoy
+        <div className="flex shrink-0 items-center gap-3">
+          {!isDefaultView && (
+            <button onClick={onClearSelection} className="text-xs text-accent transition hover:underline">
+              Volver a hoy
+            </button>
+          )}
+          <button
+            onClick={load}
+            disabled={refreshing}
+            title="Actualizar"
+            className="text-muted-foreground transition hover:text-foreground disabled:opacity-50"
+          >
+            <RefreshIcon className={refreshing ? "animate-spin" : ""} />
           </button>
-        )}
+        </div>
       </div>
 
       {loading ? (

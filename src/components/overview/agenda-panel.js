@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Pagination } from "@/components/ui/pagination";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -17,6 +17,7 @@ const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
 export function AgendaPanel({ userId, refreshSignal, onChanged }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const hasLoadedOnce = useRef(false);
   const [newText, setNewText] = useState("");
   const [newDate, setNewDate] = useState(todayISO());
   const [newPaisId, setNewPaisId] = useState(GENERAL_PAIS_ID);
@@ -37,7 +38,9 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
 
   async function load() {
     const supabase = createClient();
-    setLoading(true);
+    // solo bloquea con "Cargando..." la primera vez; recargas posteriores
+    // (propias o de otro panel) se aplican en silencio para no parpadear
+    if (!hasLoadedOnce.current) setLoading(true);
 
     // depuración real: las tareas ya finalizadas hace más de 2 días se eliminan
     // físicamente (no solo se ocultan), para no acumular filas indefinidamente
@@ -59,6 +62,7 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
     }
 
     setLoading(false);
+    hasLoadedOnce.current = true;
   }
 
   useEffect(() => {

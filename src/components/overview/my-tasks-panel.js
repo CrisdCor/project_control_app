@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { StatusBadge, DueDot } from "@/components/status/status-badge";
 import { Pagination } from "@/components/ui/pagination";
@@ -32,6 +32,7 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
   const [page, setPage] = useState(1);
   const [drawerId, setDrawerId] = useState(null);
   const [paisesById, setPaisesById] = useState({});
+  const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -53,7 +54,10 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
 
   async function loadBitacoras() {
     const supabase = createClient();
-    setLoading(true);
+    // solo bloquea con "Cargando..." la primera vez; recargas posteriores
+    // (propias o de otro panel) se aplican en silencio para no parpadear
+    if (!hasLoadedOnce.current) setLoading(true);
+    hasLoadedOnce.current = true;
 
     // sin usuario específico seleccionado (yo mismo): las RLS ya limitan a mis
     // bitácoras relacionadas (encargado, o responsable de alguna actividad)
