@@ -174,7 +174,10 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChan
             </button>
           )}
           <button
-            onClick={load}
+            onClick={() => {
+              load();
+              onChanged?.();
+            }}
             disabled={refreshing}
             title="Actualizar"
             className="text-muted-foreground transition hover:text-foreground disabled:opacity-50"
