@@ -22,7 +22,7 @@ function resolveTitle(pathname) {
   return found?.label ?? "";
 }
 
-export function Header({ profile }) {
+export function Header({ profile, navStyle, onToggleNavStyle }) {
   const pathname = usePathname();
   const router = useRouter();
   const title = resolveTitle(pathname);
@@ -76,7 +76,7 @@ export function Header({ profile }) {
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 top-full z-20 mt-1.5 w-40 animate-fade-in rounded-md border border-border bg-white py-1 shadow-md">
+          <div className="absolute right-0 top-full z-20 mt-1.5 w-48 animate-fade-in rounded-md border border-border bg-white py-1 shadow-md">
             <Link
               href="/perfil"
               onClick={() => setMenuOpen(false)}
@@ -84,6 +84,17 @@ export function Header({ profile }) {
             >
               Mi perfil
             </Link>
+            {onToggleNavStyle && (
+              <button
+                onClick={() => {
+                  onToggleNavStyle();
+                  setMenuOpen(false);
+                }}
+                className="block w-full px-3 py-2 text-left text-sm transition hover:bg-neutral-50"
+              >
+                {navStyle === "sidebar" ? "Cambiar a menú flotante" : "Cambiar a barra lateral"}
+              </button>
+            )}
             <button
               onClick={handleLogout}
               className="block w-full px-3 py-2 text-left text-sm text-status-overdue transition hover:bg-neutral-50"

@@ -7,9 +7,8 @@ import { Pagination } from "@/components/ui/pagination";
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { RefreshIcon, CalendarIcon } from "@/components/icons";
 import { localTodayISO as todayISO } from "@/lib/dates";
-import { useDynamicPageSize } from "@/lib/use-dynamic-page-size";
 
-const ROW_HEIGHT = 41;
+const PAGE_SIZE = 5;
 
 function formatTime(t) {
   if (!t) return null;
@@ -22,7 +21,6 @@ export function MeetingsTodayPanel({ userId, selectedDate }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
-  const [containerRef, pageSize] = useDynamicPageSize(ROW_HEIGHT);
 
   const date = selectedDate || todayISO();
 
@@ -66,8 +64,8 @@ export function MeetingsTodayPanel({ userId, selectedDate }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, date]);
 
-  const totalPages = Math.max(1, Math.ceil(meetings.length / pageSize));
-  const pageItems = meetings.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.max(1, Math.ceil(meetings.length / PAGE_SIZE));
+  const pageItems = meetings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
@@ -85,7 +83,7 @@ export function MeetingsTodayPanel({ userId, selectedDate }) {
         </button>
       </div>
 
-      <div ref={containerRef} className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {loading ? (
           <p className="text-sm text-muted-foreground">Cargando...</p>
         ) : pageItems.length === 0 ? (

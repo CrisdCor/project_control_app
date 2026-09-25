@@ -10,22 +10,20 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { localTodayISO as todayISO } from "@/lib/dates";
-import { useDynamicPageSize } from "@/lib/use-dynamic-page-size";
 
-const ROW_HEIGHT = 41;
+const PAGE_SIZE = 6;
 const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
 
 export function AgendaPanel({ userId, refreshSignal, onChanged }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const hasLoadedOnce = useRef(false);
-  const [newText, setNewText] = useState("");
-  const [newDate, setNewDate] = useState(todayISO());
-  const [newPaisId, setNewPaisId] = useState(GENERAL_PAIS_ID);
   const [paises, setPaises] = useState([]);
   const [paisesById, setPaisesById] = useState({});
   const [page, setPage] = useState(1);
-  const [containerRef, pageSize] = useDynamicPageSize(ROW_HEIGHT);
+
+  // se reutiliza el mismo modal para crear y editar: editingItem.id === null
+  // significa que se está creando una tarea nueva
   const [editingItem, setEditingItem] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDate, setEditDate] = useState("");
@@ -81,27 +79,21 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
     });
   }, [items]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const pageItems = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const pageItems = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  async function handleAdd(e) {
-    e.preventDefault();
-    if (!newText.trim()) return;
-    const supabase = createClient();
-    const { data: created, error } = await supabase
-      .from("agenda_items")
-      .insert({ user_id: userId, text: newText.trim(), due_date: newDate, pais_id: newPaisId })
-      .select()
-      .single();
-    if (error) {
-      flashError("No se pudo agregar la tarea. Intenta de nuevo.");
-      return;
-    }
-    if (created) setItems((prev) => [...prev, created]);
-    setNewText("");
-    setNewDate(todayISO());
-    setNewPaisId(GENERAL_PAIS_ID);
-    onChanged?.();
+  function openCreate() {
+    setEditingItem({ id: null });
+    setEditText("");
+    setEditDate(todayISO());
+    setEditPaisId(GENERAL_PAIS_ID);
+  }
+
+  function startEdit(item) {
+    setEditingItem(item);
+    setEditText(item.text);
+    setEditDate(item.due_date);
+    setEditPaisId(item.pais_id ?? GENERAL_PAIS_ID);
   }
 
   async function toggleDone(item) {
@@ -122,23 +114,34 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
     onChanged?.();
   }
 
-  function startEdit(item) {
-    setEditingItem(item);
-    setEditText(item.text);
-    setEditDate(item.due_date);
-    setEditPaisId(item.pais_id ?? GENERAL_PAIS_ID);
-  }
-
   async function saveEdit(e) {
     e?.preventDefault();
     if (!editingItem || !editText.trim()) return;
     setSavingEdit(true);
-    const previous = editingItem;
+    const supabase = createClient();
     const text = editText.trim();
     const due_date = editDate;
     const pais_id = editPaisId;
+
+    if (!editingItem.id) {
+      const { data: created, error } = await supabase
+        .from("agenda_items")
+        .insert({ user_id: userId, text, due_date, pais_id })
+        .select()
+        .single();
+      setSavingEdit(false);
+      if (error) {
+        flashError("No se pudo agregar la tarea. Intenta de nuevo.");
+        return;
+      }
+      if (created) setItems((prev) => [...prev, created]);
+      setEditingItem(null);
+      onChanged?.();
+      return;
+    }
+
+    const previous = editingItem;
     setItems((prev) => prev.map((i) => (i.id === editingItem.id ? { ...i, text, due_date, pais_id } : i)));
-    const supabase = createClient();
     const { data, error } = await supabase
       .from("agenda_items")
       .update({ text, due_date, pais_id })
@@ -168,108 +171,85 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
 
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
-      <h2 className="mb-3 shrink-0 text-sm font-semibold">Mi agenda</h2>
+      <div className="mb-3 flex shrink-0 items-center justify-between">
+        <h2 className="text-sm font-semibold">Mi agenda</h2>
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-1 rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800"
+        >
+          <PlusIcon />
+          Agregar
+        </button>
+      </div>
 
       {errorMsg && <p className="mb-2 shrink-0 text-xs text-status-overdue">{errorMsg}</p>}
-
-      <form onSubmit={handleAdd} className="mb-3 flex shrink-0 flex-col gap-2">
-        <input
-          value={newText}
-          onChange={(e) => setNewText(e.target.value)}
-          placeholder="Nueva tarea..."
-          className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-        />
-        <DatePicker value={newDate} onChange={setNewDate} />
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <FilterDropdown
-              allowClear={false}
-              value={newPaisId}
-              onChange={setNewPaisId}
-              fullWidth
-              options={paises.map((p) => ({
-                value: p.id,
-                label: p.code ? `${p.code} · ${p.name}` : p.name,
-              }))}
-            />
-          </div>
-          <button
-            type="submit"
-            className="flex items-center gap-1 rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-800"
-          >
-            <PlusIcon />
-            Agregar
-          </button>
-        </div>
-      </form>
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
       ) : pageItems.length === 0 ? (
         <p className="text-sm text-muted-foreground">Sin tareas en tu agenda.</p>
       ) : (
-        <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto overflow-x-hidden">
-          {pageItems.map((item) => (
-            <div key={item.id} className="flex items-center gap-2 py-2">
-              <input
-                type="checkbox"
-                checked={item.done}
-                onChange={() => toggleDone(item)}
-                className="h-4 w-4 shrink-0 accent-black"
-              />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex flex-col divide-y divide-border">
+            {pageItems.map((item) => (
+              <div key={item.id} className="flex items-center gap-2 py-2">
+                <input
+                  type="checkbox"
+                  checked={item.done}
+                  onChange={() => toggleDone(item)}
+                  className="h-4 w-4 shrink-0 accent-black"
+                />
 
-              <button
-                onDoubleClick={() => startEdit(item)}
-                className={`flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm ${
-                  item.done ? "text-muted-foreground line-through" : ""
-                }`}
-                title="Doble clic para editar"
-              >
-                {item.source_meeting_id && (
-                  <span title="Proviene de una reunión" className="shrink-0 text-accent">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                  </span>
-                )}
-                <CountryCodeTag pais={paisesById[item.pais_id]} />
-                <Tooltip
-                  className="min-w-0 flex-1"
-                  content={
-                    <>
-                      <p className="font-medium">{item.text}</p>
-                      <p className="text-muted-foreground">
-                        {new Date(item.due_date + "T00:00:00").toLocaleDateString("es-CO", {
-                          weekday: "long",
-                          day: "2-digit",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </>
-                  }
+                <button
+                  onDoubleClick={() => startEdit(item)}
+                  className={`flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm ${
+                    item.done ? "text-muted-foreground line-through" : ""
+                  }`}
+                  title="Doble clic para editar"
                 >
-                  <span className="block truncate">{item.text}</span>
-                </Tooltip>
-              </button>
+                  {item.source_meeting_id && (
+                    <span title="Proviene de una reunión" className="shrink-0 text-accent">
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                  <CountryCodeTag pais={paisesById[item.pais_id]} />
+                  <Tooltip
+                    className="min-w-0 flex-1"
+                    content={
+                      <>
+                        <p className="font-medium">{item.text}</p>
+                        <p className="text-muted-foreground">
+                          {new Date(item.due_date + "T00:00:00").toLocaleDateString("es-CO", {
+                            weekday: "long",
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </>
+                    }
+                  >
+                    <span className="block truncate">{item.text}</span>
+                  </Tooltip>
+                </button>
 
-              <span
-                className="shrink-0 text-xs font-medium"
-                style={{ color: agendaSemaphore(item.due_date) }}
-              >
-                {new Date(item.due_date + "T00:00:00").toLocaleDateString("es-CO", {
-                  day: "2-digit",
-                  month: "2-digit",
-                })}
-              </span>
+                <span className="shrink-0 text-xs font-medium" style={{ color: agendaSemaphore(item.due_date) }}>
+                  {new Date(item.due_date + "T00:00:00").toLocaleDateString("es-CO", {
+                    day: "2-digit",
+                    month: "2-digit",
+                  })}
+                </span>
 
-              <button
-                onClick={() => handleDelete(item)}
-                className="shrink-0 text-muted-foreground transition hover:text-status-overdue"
-                title="Eliminar"
-              >
-                <TrashIcon />
-              </button>
-            </div>
-          ))}
+                <button
+                  onClick={() => handleDelete(item)}
+                  className="shrink-0 text-muted-foreground transition hover:text-status-overdue"
+                  title="Eliminar"
+                >
+                  <TrashIcon />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -281,12 +261,13 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-xs animate-fade-in rounded-[var(--radius-card)] border border-border bg-white p-5 shadow-lg"
           >
-            <h3 className="mb-3 text-sm font-semibold">Editar tarea</h3>
+            <h3 className="mb-3 text-sm font-semibold">{editingItem.id ? "Editar tarea" : "Nueva tarea"}</h3>
             <form onSubmit={saveEdit} className="flex flex-col gap-3">
               <input
                 autoFocus
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
+                placeholder="Descripción de la tarea..."
                 className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
               />
               <DatePicker value={editDate} onChange={setEditDate} />
@@ -305,7 +286,7 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
                   disabled={savingEdit || !editText.trim()}
                   className="flex-1 rounded-md bg-black py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
                 >
-                  Guardar
+                  {editingItem.id ? "Guardar" : "Crear"}
                 </button>
                 <button
                   type="button"

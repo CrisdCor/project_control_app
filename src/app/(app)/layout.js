@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/layout/header";
-import { FloatingNav } from "@/components/layout/floating-nav";
+import { AppShell } from "@/components/layout/app-shell";
 import { InactivityLogout } from "@/components/layout/inactivity-logout";
 
 export default async function AppLayout({ children }) {
@@ -21,14 +20,10 @@ export default async function AppLayout({ children }) {
     .maybeSingle();
 
   return (
-    <div className="flex h-screen flex-col">
+    <>
       <InactivityLogout />
-      <Header profile={profile} />
-      <main className="flex-1 overflow-y-auto">
-        <div className="content-max h-full px-5 py-4">{children}</div>
-      </main>
-      <FloatingNav profile={profile} />
-    </div>
+      <AppShell profile={profile}>{children}</AppShell>
+    </>
   );
 }
 

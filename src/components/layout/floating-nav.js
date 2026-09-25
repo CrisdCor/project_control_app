@@ -82,11 +82,6 @@ export function FloatingNav({ profile }) {
     };
   }, []);
 
-  function handleMouseLeave() {
-    // si ya se eligió una sección, se queda abierto hasta que hagan clic fuera
-    if (!activeSection) setOpen(false);
-  }
-
   function toggleMain() {
     if (open) {
       setOpen(false);
@@ -104,12 +99,7 @@ export function FloatingNav({ profile }) {
   const delayFor = (angle) => (angle === 90 ? 0 : angle === 45 ? 60 : 120);
 
   return (
-    <div
-      ref={containerRef}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={handleMouseLeave}
-      className="fixed bottom-6 left-6 z-40"
-    >
+    <div ref={containerRef} className="fixed bottom-6 left-6 z-40">
       <div className="relative h-12 w-12">
         {/* secciones en abanico */}
         {!activeSection &&
@@ -124,7 +114,7 @@ export function FloatingNav({ profile }) {
                   transitionDelay: open ? `${delayFor(section.angle)}ms` : "0ms",
                 }}
                 title={section.label}
-                className={`absolute inset-0 flex h-12 w-12 items-center justify-center rounded-full bg-white text-foreground shadow-md ring-1 ring-border transition-all duration-[600ms] ease-out ${
+                className={`absolute inset-0 flex h-12 w-12 items-center justify-center rounded-lg bg-white text-foreground shadow-md ring-1 ring-border transition-all duration-[600ms] ease-out ${
                   open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
@@ -148,7 +138,7 @@ export function FloatingNav({ profile }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex animate-fade-in items-center gap-2 whitespace-nowrap rounded-full py-2 pl-2.5 pr-4 text-sm shadow-md ring-1 ring-border transition ${
+                    className={`flex animate-fade-in items-center gap-2 whitespace-nowrap rounded-lg py-2 pl-2.5 pr-4 text-sm shadow-md ring-1 ring-border transition ${
                       active ? "bg-black text-white" : "bg-white text-foreground hover:bg-neutral-50"
                     }`}
                   >
@@ -164,7 +154,7 @@ export function FloatingNav({ profile }) {
         <button
           onClick={toggleMain}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white shadow-lg transition hover:bg-neutral-800"
+          className="relative z-10 flex h-12 w-12 items-center justify-center rounded-lg bg-black text-white shadow-lg transition hover:bg-neutral-800"
         >
           <span className="relative flex h-4 w-5 items-center justify-center">
             <span
