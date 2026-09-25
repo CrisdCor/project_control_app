@@ -210,7 +210,7 @@ export default function MiTrabajoPage() {
                     <AlertIcon />
                   </span>
                 )}
-                <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
+                <span className="hidden w-9 shrink-0 text-right text-xs text-muted-foreground sm:block">
                   {new Date(b.due_date + "T00:00:00").toLocaleDateString("es-CO")}
                 </span>
                 <StatusBadge status={bitacoraStatusKey(b)} map={BITACORA_STATUS} />

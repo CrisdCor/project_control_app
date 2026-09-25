@@ -15,16 +15,16 @@ export function CountryTag({ pais, className = "" }) {
 
 // Versión compacta: solo el código ISO, coloreado con el color del país, en
 // forma de etiqueta. Pensada para filas densas donde el nombre completo no cabe.
-// No se muestra para "General" (sin código) para no saturar el caso por defecto.
+// Siempre reserva el mismo ancho (incluso sin país/código), para que el resto
+// de la fila —checkbox, texto, fecha— quede alineado como columnas de tabla.
 export function CountryCodeTag({ pais, className = "" }) {
-  if (!pais?.code) return null;
   return (
     <span
-      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold leading-none ${className}`}
-      style={{ backgroundColor: hexToRgba(pais.color), color: pais.color }}
-      title={pais.name}
+      className={`inline-flex w-9 shrink-0 items-center justify-center whitespace-nowrap rounded px-1 py-0.5 text-[10px] font-bold leading-none ${className}`}
+      style={pais?.code ? { backgroundColor: hexToRgba(pais.color), color: pais.color } : undefined}
+      title={pais?.name}
     >
-      {pais.code}
+      {pais?.code ?? ""}
     </span>
   );
 }

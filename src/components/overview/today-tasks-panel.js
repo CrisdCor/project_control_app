@@ -233,22 +233,25 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChan
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => setDrawerBitacoraId(item.id)}
-                  className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
-                >
-                  {item.title}
-                </button>
+                <>
+                  <span className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <button
+                    onClick={() => setDrawerBitacoraId(item.id)}
+                    className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
+                  >
+                    {item.title}
+                  </button>
+                </>
               )}
 
-              <span className="shrink-0 text-xs text-muted-foreground">
+              <span className="w-9 shrink-0 text-right text-xs text-muted-foreground">
                 {new Date(item.due_date + "T00:00:00").toLocaleDateString("es-CO", {
                   day: "2-digit",
                   month: "2-digit",
                 })}
               </span>
 
-              <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+              <span className="w-16 shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-center text-[10px] font-medium text-muted-foreground">
                 {item.kind === "agenda" ? "Agenda" : item.kind === "actividad" ? "Actividad" : "Bitácora"}
               </span>
             </div>
