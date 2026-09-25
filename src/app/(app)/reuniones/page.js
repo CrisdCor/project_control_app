@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MeetingFormModal } from "@/components/reuniones/meeting-form-modal";
+import { CountryCodeTag } from "@/components/ui/country-tag";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PlusIcon, TrashIcon } from "@/components/icons";
+
+const TABS = [
+  { id: "activas", label: "Activas" },
+  { id: "archivadas", label: "Archivadas" },
+];
 
 export default function ReunionesPage() {
   const router = useRouter();
@@ -14,9 +21,11 @@ export default function ReunionesPage() {
   const [meetings, setMeetings] = useState([]);
   const [profileNames, setProfileNames] = useState({});
   const [profiles, setProfiles] = useState([]);
+  const [paisesById, setPaisesById] = useState({});
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [tab, setTab] = useState("activas");
 
   async function load() {
     const supabase = createClient();
@@ -42,6 +51,9 @@ export default function ReunionesPage() {
     setProfiles(profs ?? []);
     setProfileNames(Object.fromEntries((profs ?? []).map((p) => [p.id, p.name])));
 
+    const { data: paises } = await supabase.from("paises").select("*");
+    setPaisesById(Object.fromEntries((paises ?? []).map((p) => [p.id, p])));
+
     setLoading(false);
   }
 
@@ -59,6 +71,11 @@ export default function ReunionesPage() {
     load();
   }
 
+  const visible = useMemo(
+    () => meetings.filter((m) => (tab === "archivadas" ? m.archived_at : !m.archived_at)),
+    [meetings, tab]
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -74,28 +91,36 @@ export default function ReunionesPage() {
         </button>
       </div>
 
+      <SegmentedControl options={TABS} value={tab} onChange={setTab} />
+
       <div className="rounded-[var(--radius-card)] border border-border bg-surface shadow-sm">
         {loading ? (
           <p className="p-5 text-sm text-muted-foreground">Cargando...</p>
-        ) : meetings.length === 0 ? (
-          <p className="p-5 text-sm text-muted-foreground">Aún no hay reuniones registradas.</p>
+        ) : visible.length === 0 ? (
+          <p className="p-5 text-sm text-muted-foreground">
+            {tab === "archivadas" ? "No hay reuniones archivadas." : "Aún no hay reuniones activas."}
+          </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted-foreground">
                 <th className="px-5 py-3 font-medium">Título</th>
+                <th className="px-5 py-3 font-medium">País</th>
                 <th className="px-5 py-3 font-medium">Fecha</th>
                 <th className="px-5 py-3 font-medium">Moderador</th>
                 <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
-              {meetings.map((m) => (
+              {visible.map((m) => (
                 <tr key={m.id} className="border-b border-border last:border-0">
                   <td className="px-5 py-3">
                     <Link href={`/reuniones/${m.id}`} className="font-medium hover:underline">
                       {m.title}
                     </Link>
+                  </td>
+                  <td className="px-5 py-3">
+                    <CountryCodeTag pais={paisesById[m.pais_id]} />
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">
                     {new Date(m.meeting_date + "T00:00:00").toLocaleDateString("es-CO")}

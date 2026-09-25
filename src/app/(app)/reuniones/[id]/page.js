@@ -8,10 +8,12 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { MeetingChecklistDrawer } from "@/components/reuniones/meeting-checklist-drawer";
-import { TrashIcon, PencilIcon } from "@/components/icons";
+import { CountryCodeTag } from "@/components/ui/country-tag";
+import { TrashIcon, PencilIcon, ArchiveIcon } from "@/components/icons";
 import { localTodayISO as todayISO } from "@/lib/dates";
 
 const EXTERNAL_PREFIX = "ext:";
+const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
 
 function formatTime(t) {
   if (!t) return null;
@@ -27,12 +29,14 @@ export default function ReunionDetallePage() {
   const [meeting, setMeeting] = useState(null);
   const [participants, setParticipants] = useState([]); // [{id, name}]
   const [profiles, setProfiles] = useState([]);
+  const [paises, setPaises] = useState([]);
   const [items, setItems] = useState([]);
   const [checklistItems, setChecklistItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [deletingMeeting, setDeletingMeeting] = useState(false);
   const [confirmDeleteMeeting, setConfirmDeleteMeeting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
 
   // edición del detalle
@@ -40,6 +44,7 @@ export default function ReunionDetallePage() {
   const [titleDraft, setTitleDraft] = useState("");
   const [moderatorDraft, setModeratorDraft] = useState("");
   const [participantIdsDraft, setParticipantIdsDraft] = useState([]);
+  const [paisDraft, setPaisDraft] = useState(GENERAL_PAIS_ID);
   const [savingDetail, setSavingDetail] = useState(false);
 
   // nuevo compromiso
@@ -81,17 +86,19 @@ export default function ReunionDetallePage() {
     } = await supabase.auth.getUser();
     setCurrentUserId(user?.id ?? null);
 
-    const [{ data: profile }, { data: m }, { data: parts }, { data: profs }] = await Promise.all([
+    const [{ data: profile }, { data: m }, { data: parts }, { data: profs }, { data: paisesData }] = await Promise.all([
       user ? supabase.from("profiles").select("role").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
       supabase.from("meetings").select("*").eq("id", id).maybeSingle(),
       supabase.from("meeting_participants").select("user_id, profiles(name)").eq("meeting_id", id),
       supabase.from("profiles").select("id, name").order("name"),
+      supabase.from("paises").select("*").order("name"),
     ]);
 
     setIsAdmin(profile?.role === "admin");
     setMeeting(m);
     setParticipants((parts ?? []).map((p) => ({ id: p.user_id, name: p.profiles?.name })).filter((p) => p.name));
     setProfiles(profs ?? []);
+    setPaises(paisesData ?? []);
 
     await Promise.all([reloadItems(), reloadChecklist()]);
 
@@ -157,6 +164,7 @@ export default function ReunionDetallePage() {
     setTitleDraft(meeting.title);
     setModeratorDraft(meeting.moderator_id ?? "");
     setParticipantIdsDraft(otherParticipants.map((p) => p.id));
+    setPaisDraft(meeting.pais_id ?? GENERAL_PAIS_ID);
     setEditingDetail(true);
   }
 
@@ -167,7 +175,7 @@ export default function ReunionDetallePage() {
 
     await supabase
       .from("meetings")
-      .update({ title: titleDraft.trim(), moderator_id: moderatorDraft })
+      .update({ title: titleDraft.trim(), moderator_id: moderatorDraft, pais_id: paisDraft })
       .eq("id", id);
 
     const finalParticipantIds = [...new Set([...participantIdsDraft, moderatorDraft])];
@@ -180,6 +188,17 @@ export default function ReunionDetallePage() {
 
     setSavingDetail(false);
     setEditingDetail(false);
+    load();
+  }
+
+  async function handleToggleArchive() {
+    setArchiving(true);
+    const supabase = createClient();
+    await supabase
+      .from("meetings")
+      .update({ archived_at: meeting.archived_at ? null : new Date().toISOString() })
+      .eq("id", id);
+    setArchiving(false);
     load();
   }
 
@@ -273,32 +292,47 @@ export default function ReunionDetallePage() {
         <Link href="/reuniones" className="text-sm text-muted-foreground hover:underline">
           ← Reuniones
         </Link>
-        {canDeleteMeeting &&
-          (confirmDeleteMeeting ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDeleteMeeting}
-                disabled={deletingMeeting}
-                className="rounded-md bg-status-overdue px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-              >
-                {deletingMeeting ? "Eliminando..." : "Confirmar"}
-              </button>
-              <button
-                onClick={() => setConfirmDeleteMeeting(false)}
-                className="rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-neutral-50"
-              >
-                Cancelar
-              </button>
-            </div>
-          ) : (
+        <div className="flex items-center gap-2">
+          {meeting.archived_at && (
+            <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-muted-foreground">Archivada</span>
+          )}
+          {canEdit && (
             <button
-              onClick={() => setConfirmDeleteMeeting(true)}
-              className="flex items-center gap-1.5 rounded-md border border-status-overdue/40 px-2.5 py-1.5 text-xs text-status-overdue transition hover:bg-red-50"
+              onClick={handleToggleArchive}
+              disabled={archiving}
+              className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs transition hover:bg-neutral-50 disabled:opacity-50"
             >
-              <TrashIcon />
-              Eliminar reunión
+              <ArchiveIcon />
+              {meeting.archived_at ? "Reactivar" : "Archivar reunión"}
             </button>
-          ))}
+          )}
+          {canDeleteMeeting &&
+            (confirmDeleteMeeting ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDeleteMeeting}
+                  disabled={deletingMeeting}
+                  className="rounded-md bg-status-overdue px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+                >
+                  {deletingMeeting ? "Eliminando..." : "Confirmar"}
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteMeeting(false)}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-neutral-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDeleteMeeting(true)}
+                className="flex items-center gap-1.5 rounded-md border border-status-overdue/40 px-2.5 py-1.5 text-xs text-status-overdue transition hover:bg-red-50"
+              >
+                <TrashIcon />
+                Eliminar reunión
+              </button>
+            ))}
+        </div>
       </div>
 
       {/* Detalle de la reunión */}
@@ -329,6 +363,15 @@ export default function ReunionDetallePage() {
                 placeholder="Selecciona participantes..."
               />
             </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">País</label>
+              <FilterDropdown
+                allowClear={false}
+                value={paisDraft}
+                onChange={setPaisDraft}
+                options={paises.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
+              />
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={handleSaveDetail}
@@ -349,6 +392,7 @@ export default function ReunionDetallePage() {
           <>
             <div className="mb-1 flex items-center gap-2">
               <h1 className="text-base font-semibold">{meeting.title}</h1>
+              <CountryCodeTag pais={paises.find((p) => p.id === meeting.pais_id)} />
               {canEdit && (
                 <button
                   onClick={startEditDetail}

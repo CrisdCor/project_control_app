@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -10,6 +10,8 @@ import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { PlusIcon, GripIcon } from "@/components/icons";
 import { fetchOutstandingCommitments } from "@/lib/meetings";
 import { localTodayISO as todayISO } from "@/lib/dates";
+
+const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
 
 export function MeetingFormModal({ open, onClose, profiles, pastMeetings, currentUserId, onCreated }) {
   const [title, setTitle] = useState("");
@@ -21,11 +23,23 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
   const [externalName, setExternalName] = useState("");
   const [externalParticipants, setExternalParticipants] = useState([]);
   const [previousMeetingId, setPreviousMeetingId] = useState("");
+  const [paisId, setPaisId] = useState(GENERAL_PAIS_ID);
+  const [paises, setPaises] = useState([]);
   const [checklistDraft, setChecklistDraft] = useState("");
   const [checklistItems, setChecklistItems] = useState([]);
   const [dragIndex, setDragIndex] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const supabase = createClient();
+    supabase
+      .from("paises")
+      .select("*")
+      .order("name")
+      .then(({ data }) => setPaises(data ?? []));
+  }, [open]);
 
   function reset() {
     setTitle("");
@@ -37,6 +51,7 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
     setExternalName("");
     setExternalParticipants([]);
     setPreviousMeetingId("");
+    setPaisId(GENERAL_PAIS_ID);
     setChecklistDraft("");
     setChecklistItems([]);
     setError(null);
@@ -100,6 +115,7 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
         moderator_id: moderatorId,
         external_participants: externalParticipants,
         previous_meeting_id: previousMeetingId || null,
+        pais_id: paisId,
         created_by: currentUserId,
       })
       .select()
@@ -155,9 +171,20 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Fecha de la reunión</label>
-          <DatePicker value={meetingDate} onChange={setMeetingDate} />
+        <div className="flex gap-3">
+          <div className="flex flex-1 flex-col gap-1.5">
+            <label className="text-sm font-medium">Fecha de la reunión</label>
+            <DatePicker value={meetingDate} onChange={setMeetingDate} />
+          </div>
+          <div className="flex w-32 flex-col gap-1.5">
+            <label className="text-sm font-medium">País</label>
+            <FilterDropdown
+              allowClear={false}
+              value={paisId}
+              onChange={setPaisId}
+              options={paises.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
+            />
+          </div>
         </div>
 
         <div className="flex gap-3">
