@@ -11,8 +11,9 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { AlertIcon } from "@/components/icons";
 import { CountryCodeTag } from "@/components/ui/country-tag";
+import { useDynamicPageSize } from "@/lib/use-dynamic-page-size";
 
-const PAGE_SIZE = 5;
+const ROW_HEIGHT = 41;
 
 const QUICK_FILTERS = [
   { id: "vencidas", label: "Vencidas" },
@@ -33,6 +34,7 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
   const [drawerId, setDrawerId] = useState(null);
   const [paisesById, setPaisesById] = useState({});
   const hasLoadedOnce = useRef(false);
+  const [containerRef, pageSize] = useDynamicPageSize(ROW_HEIGHT);
 
   useEffect(() => {
     const supabase = createClient();
@@ -133,8 +135,8 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
     return list.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
   }, [bitacoras, filter]);
 
-  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
-  const pageItems = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
+  const pageItems = visible.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
@@ -169,8 +171,9 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
       ) : pageItems.length === 0 ? (
         <p className="text-sm text-muted-foreground">No hay bitácoras para este filtro.</p>
       ) : (
-        <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
-          {pageItems.map((b) => (
+        <div ref={containerRef} className="flex-1 min-h-0">
+          <div className="flex flex-col divide-y divide-border">
+            {pageItems.map((b) => (
             <div key={b.id} className="flex items-center gap-3 py-2">
               <DueDot color={dueSemaphore(b.due_date)} />
               <CountryCodeTag pais={paisesById[b.pais_id]} />
@@ -195,6 +198,7 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
               </button>
             </div>
           ))}
+          </div>
         </div>
       )}
 

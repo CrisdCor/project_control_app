@@ -11,6 +11,10 @@ import { CountryCodeTag } from "@/components/ui/country-tag";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { localTodayISO as todayISO } from "@/lib/dates";
 import { RefreshIcon } from "@/components/icons";
+import { Pagination } from "@/components/ui/pagination";
+import { useDynamicPageSize } from "@/lib/use-dynamic-page-size";
+
+const ROW_HEIGHT = 41;
 
 export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChanged }) {
   const [items, setItems] = useState([]);
@@ -19,6 +23,8 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChan
   const hasLoadedOnce = useRef(false);
   const [drawerBitacoraId, setDrawerBitacoraId] = useState(null);
   const [paisesById, setPaisesById] = useState({});
+  const [page, setPage] = useState(1);
+  const [containerRef, pageSize] = useDynamicPageSize(ROW_HEIGHT);
 
   const [editingItem, setEditingItem] = useState(null);
   const [editText, setEditText] = useState("");
@@ -111,6 +117,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChan
 
   useEffect(() => {
     (async () => {
+      setPage(1);
       await load();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -194,8 +201,9 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChan
           {isDefaultView ? "Sin tareas vencidas ni para hoy. Vas al día." : "Sin tareas programadas para este día."}
         </p>
       ) : (
-        <div className="flex flex-1 min-h-0 flex-col divide-y divide-border overflow-y-auto">
-          {items.map((item) => (
+        <div ref={containerRef} className="flex-1 min-h-0">
+          <div className="flex flex-col divide-y divide-border">
+            {items.slice((page - 1) * pageSize, page * pageSize).map((item) => (
             <div key={`${item.kind}-${item.id}`} className="flex items-center gap-2.5 py-2">
               <CountryCodeTag pais={paisesById[item.pais_id]} />
 
@@ -256,6 +264,13 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChan
               </span>
             </div>
           ))}
+          </div>
+        </div>
+      )}
+
+      {items.length > 0 && (
+        <div className="shrink-0">
+          <Pagination page={page} totalPages={Math.max(1, Math.ceil(items.length / pageSize))} onChange={setPage} />
         </div>
       )}
 

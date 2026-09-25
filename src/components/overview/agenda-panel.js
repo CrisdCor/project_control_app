@@ -10,8 +10,9 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { localTodayISO as todayISO } from "@/lib/dates";
+import { useDynamicPageSize } from "@/lib/use-dynamic-page-size";
 
-const PAGE_SIZE = 15;
+const ROW_HEIGHT = 41;
 const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
 
 export function AgendaPanel({ userId, refreshSignal, onChanged }) {
@@ -24,6 +25,7 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
   const [paises, setPaises] = useState([]);
   const [paisesById, setPaisesById] = useState({});
   const [page, setPage] = useState(1);
+  const [containerRef, pageSize] = useDynamicPageSize(ROW_HEIGHT);
   const [editingItem, setEditingItem] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDate, setEditDate] = useState("");
@@ -79,8 +81,8 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
     });
   }, [items]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const pageItems = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageItems = sorted.slice((page - 1) * pageSize, page * pageSize);
 
   async function handleAdd(e) {
     e.preventDefault();

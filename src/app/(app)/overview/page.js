@@ -6,6 +6,7 @@ import { MyTasksPanel } from "@/components/overview/my-tasks-panel";
 import { AgendaPanel } from "@/components/overview/agenda-panel";
 import { TodayTasksPanel } from "@/components/overview/today-tasks-panel";
 import { WeekTasksStrip } from "@/components/overview/week-tasks-strip";
+import { MeetingsTodayPanel } from "@/components/overview/meetings-today-panel";
 
 export default function OverviewPage() {
   const [user, setUser] = useState(null);
@@ -60,7 +61,14 @@ export default function OverviewPage() {
             <MyTasksPanel currentUserId={user.id} isAdmin={isAdmin} refreshSignal={refreshTick} onChanged={bumpRefresh} />
           </div>
         </div>
-        <AgendaPanel userId={user.id} refreshSignal={refreshTick} onChanged={bumpRefresh} />
+        <div className="flex min-h-0 flex-col gap-3">
+          <div className="min-h-0 flex-1">
+            <AgendaPanel userId={user.id} refreshSignal={refreshTick} onChanged={bumpRefresh} />
+          </div>
+          <div className="min-h-0 flex-1">
+            <MeetingsTodayPanel userId={user.id} selectedDate={selectedDate} />
+          </div>
+        </div>
       </div>
     </div>
   );
