@@ -275,6 +275,7 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
                 allowClear={false}
                 value={editPaisId}
                 onChange={setEditPaisId}
+                fullWidth
                 options={paises.map((p) => ({
                   value: p.id,
                   label: p.code ? `${p.code} · ${p.name}` : p.name,

@@ -46,6 +46,7 @@ export default function OverviewPage() {
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
         refreshSignal={refreshTick}
+        onRefreshAll={bumpRefresh}
       />
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-h-0 flex-col gap-3">
@@ -54,6 +55,7 @@ export default function OverviewPage() {
               userId={user.id}
               selectedDate={selectedDate}
               onClearSelection={() => setSelectedDate(null)}
+              refreshSignal={refreshTick}
               onChanged={bumpRefresh}
             />
           </div>
@@ -66,7 +68,7 @@ export default function OverviewPage() {
             <AgendaPanel userId={user.id} refreshSignal={refreshTick} onChanged={bumpRefresh} />
           </div>
           <div className="min-h-0 flex-1">
-            <MeetingsTodayPanel userId={user.id} selectedDate={selectedDate} />
+            <MeetingsTodayPanel userId={user.id} selectedDate={selectedDate} refreshSignal={refreshTick} />
           </div>
         </div>
       </div>

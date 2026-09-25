@@ -10,12 +10,11 @@ import { fetchMyBitacoraIds } from "@/lib/bitacoras";
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { localTodayISO as todayISO } from "@/lib/dates";
-import { RefreshIcon } from "@/components/icons";
 import { Pagination } from "@/components/ui/pagination";
 
 const PAGE_SIZE = 6;
 
-export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChanged }) {
+export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refreshSignal, onChanged }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -119,7 +118,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChan
       await load();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, selectedDate]);
+  }, [userId, selectedDate, refreshSignal]);
 
   async function toggleAgendaDone(item) {
     setItems((prev) => prev.filter((i) => !(i.kind === "agenda" && i.id === item.id)));
@@ -178,17 +177,6 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, onChan
               Volver a hoy
             </button>
           )}
-          <button
-            onClick={() => {
-              load();
-              onChanged?.();
-            }}
-            disabled={refreshing}
-            title="Actualizar"
-            className="text-muted-foreground transition hover:text-foreground disabled:opacity-50"
-          >
-            <RefreshIcon className={refreshing ? "animate-spin" : ""} />
-          </button>
         </div>
       </div>
 

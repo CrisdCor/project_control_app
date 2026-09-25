@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Pagination } from "@/components/ui/pagination";
 import { CountryCodeTag } from "@/components/ui/country-tag";
-import { RefreshIcon, CalendarIcon } from "@/components/icons";
+import { CalendarIcon } from "@/components/icons";
 import { localTodayISO as todayISO } from "@/lib/dates";
 
 const PAGE_SIZE = 5;
@@ -15,11 +15,10 @@ function formatTime(t) {
   return t.slice(0, 5);
 }
 
-export function MeetingsTodayPanel({ userId, selectedDate }) {
+export function MeetingsTodayPanel({ userId, selectedDate, refreshSignal }) {
   const [meetings, setMeetings] = useState([]);
   const [paisesById, setPaisesById] = useState({});
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
 
   const date = selectedDate || todayISO();
@@ -27,7 +26,6 @@ export function MeetingsTodayPanel({ userId, selectedDate }) {
   async function load() {
     const supabase = createClient();
     if (meetings.length === 0) setLoading(true);
-    else setRefreshing(true);
 
     const [{ data: participantRows }, { data: paisesData }] = await Promise.all([
       supabase.from("meeting_participants").select("meeting_id").eq("user_id", userId),
@@ -39,7 +37,6 @@ export function MeetingsTodayPanel({ userId, selectedDate }) {
     if (meetingIds.length === 0) {
       setMeetings([]);
       setLoading(false);
-      setRefreshing(false);
       return;
     }
 
@@ -53,7 +50,6 @@ export function MeetingsTodayPanel({ userId, selectedDate }) {
 
     setMeetings(data ?? []);
     setLoading(false);
-    setRefreshing(false);
   }
 
   useEffect(() => {
@@ -62,26 +58,16 @@ export function MeetingsTodayPanel({ userId, selectedDate }) {
       await load();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, date]);
+  }, [userId, date, refreshSignal]);
 
   const totalPages = Math.max(1, Math.ceil(meetings.length / PAGE_SIZE));
   const pageItems = meetings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <section className="flex h-full flex-col rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-sm">
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">
-          {selectedDate ? "Reuniones · día seleccionado" : "Reuniones del día"}
-        </h2>
-        <button
-          onClick={load}
-          disabled={refreshing}
-          title="Actualizar"
-          className="text-muted-foreground transition hover:text-foreground disabled:opacity-50"
-        >
-          <RefreshIcon className={refreshing ? "animate-spin" : ""} />
-        </button>
-      </div>
+      <h2 className="mb-3 shrink-0 text-sm font-semibold">
+        {selectedDate ? "Reuniones · día seleccionado" : "Reuniones del día"}
+      </h2>
 
       <div className="flex-1 min-h-0 overflow-hidden">
         {loading ? (

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchMyBitacoraIds } from "@/lib/bitacoras";
-import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon } from "@/components/icons";
 import { localTodayISO as todayISO } from "@/lib/dates";
 
 const DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -37,11 +37,12 @@ function weekDates(weekOffset) {
 // Tira semanal compacta: solo selecciona el día y muestra un conteo. El detalle
 // de tareas de ese día se muestra en el panel "Tareas del día" (evita que esta
 // tira empuje al resto de contenedores hacia abajo al desplegar una lista).
-export function WeekTasksStrip({ userId, selectedDate, onSelectDate, refreshSignal }) {
+export function WeekTasksStrip({ userId, selectedDate, onSelectDate, refreshSignal, onRefreshAll }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [animKey, setAnimKey] = useState(0);
   const [animDirection, setAnimDirection] = useState("right");
   const [countsByDate, setCountsByDate] = useState({});
+  const [refreshing, setRefreshing] = useState(false);
 
   const days = useMemo(() => weekDates(weekOffset), [weekOffset]);
 
@@ -118,6 +119,13 @@ export function WeekTasksStrip({ userId, selectedDate, onSelectDate, refreshSign
     onSelectDate(todayISO());
   }
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    await load();
+    onRefreshAll?.();
+    setRefreshing(false);
+  }
+
   const today = todayISO();
   const monthLabel = days[0].toLocaleDateString("es-CO", { month: "long", year: "numeric" });
 
@@ -125,11 +133,21 @@ export function WeekTasksStrip({ userId, selectedDate, onSelectDate, refreshSign
     <section className="flex shrink-0 flex-col rounded-[var(--radius-card)] border border-border bg-surface p-3 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-xs font-semibold capitalize text-muted-foreground">{monthLabel}</h2>
-        {weekOffset !== 0 && (
-          <button onClick={goToday} className="text-xs text-accent transition hover:underline">
-            Volver a hoy
+        <div className="flex items-center gap-3">
+          {weekOffset !== 0 && (
+            <button onClick={goToday} className="text-xs text-accent transition hover:underline">
+              Volver a hoy
+            </button>
+          )}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Actualizar todo el Resumen"
+            className="text-muted-foreground transition hover:text-foreground disabled:opacity-50"
+          >
+            <RefreshIcon className={refreshing ? "animate-spin" : ""} />
           </button>
-        )}
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5">

@@ -47,10 +47,12 @@ export function Header({ profile, navStyle, onToggleNavStyle }) {
   }
 
   return (
-    <header className="relative flex h-12 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
-      <Image src="/logo-veloces.png" alt="Veloces" width={88} height={24} priority />
+    <header className="relative flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
+      <Image src="/logo-veloces.png" alt="Veloces" width={108} height={30} priority />
 
-      <span className="absolute left-1/2 -translate-x-1/2 text-sm font-medium text-muted-foreground">{title}</span>
+      <span className="absolute left-1/2 -translate-x-1/2 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+        {title}
+      </span>
 
       <div ref={menuRef} className="relative">
         <button

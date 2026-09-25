@@ -36,7 +36,7 @@ const SECTIONS = [
   },
 ];
 
-const RADIUS = 72;
+const RADIUS = 58;
 
 function fanTransform(angleDeg, isOpen) {
   if (!isOpen) return "translate(0px, 0px) scale(0.4)";
@@ -114,11 +114,11 @@ export function FloatingNav({ profile }) {
                   transitionDelay: open ? `${delayFor(section.angle)}ms` : "0ms",
                 }}
                 title={section.label}
-                className={`absolute inset-0 flex h-12 w-12 items-center justify-center rounded-lg bg-white text-foreground shadow-md ring-1 ring-border transition-all duration-[600ms] ease-out ${
+                className={`absolute inset-0 flex h-9 w-9 items-center justify-center rounded-lg bg-white text-foreground shadow-md ring-1 ring-border transition-all duration-[600ms] ease-out ${
                   open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
-                <SectionIcon className="h-4 w-4" />
+                <SectionIcon className="h-3.5 w-3.5" />
               </button>
             );
           })}
@@ -138,11 +138,11 @@ export function FloatingNav({ profile }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex animate-fade-in items-center gap-2 whitespace-nowrap rounded-lg py-2 pl-2.5 pr-4 text-sm shadow-md ring-1 ring-border transition ${
+                    className={`flex animate-fade-in items-center gap-1.5 whitespace-nowrap rounded-lg py-1.5 pl-2 pr-3 text-xs shadow-md ring-1 ring-border transition ${
                       active ? "bg-black text-white" : "bg-white text-foreground hover:bg-neutral-50"
                     }`}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
                     {item.label}
                   </Link>
                 );
