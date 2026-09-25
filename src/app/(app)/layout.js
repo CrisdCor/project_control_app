@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/header";
-import { Sidebar } from "@/components/layout/sidebar";
+import { FloatingNav } from "@/components/layout/floating-nav";
 import { InactivityLogout } from "@/components/layout/inactivity-logout";
 
 export default async function AppLayout({ children }) {
@@ -16,20 +16,18 @@ export default async function AppLayout({ children }) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, name, email, area, role, photo_url")
+    .select("id, name, email, area, cargo, role, photo_url")
     .eq("id", user.id)
     .maybeSingle();
 
   return (
     <div className="flex h-screen flex-col">
       <InactivityLogout />
-      <Header />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar profile={profile} />
-        <main className="flex-1 overflow-y-auto">
-          <div className="content-max h-full px-5 py-4">{children}</div>
-        </main>
-      </div>
+      <Header profile={profile} />
+      <main className="flex-1 overflow-y-auto">
+        <div className="content-max h-full px-5 py-4">{children}</div>
+      </main>
+      <FloatingNav profile={profile} />
     </div>
   );
 }
