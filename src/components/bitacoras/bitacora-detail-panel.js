@@ -48,7 +48,6 @@ export function BitacoraDetailPanel({
   const [activityAssignee, setActivityAssignee] = useState("");
   const [addingActivity, setAddingActivity] = useState(false);
   const [activityError, setActivityError] = useState(null);
-  const [observationsDraft, setObservationsDraft] = useState({});
 
   const [editingActivityId, setEditingActivityId] = useState(null);
   const [editDetail, setEditDetail] = useState("");
@@ -118,7 +117,6 @@ export function BitacoraDetailPanel({
         .eq("bitacora_id", bitacoraId)
         .order("due_date");
       setActivities(acts ?? []);
-      setObservationsDraft(Object.fromEntries((acts ?? []).map((a) => [a.id, a.observations ?? ""])));
       setActivityDueDate(b?.due_date ?? "");
       await loadChecklistCounts(supabase, (acts ?? []).map((a) => a.id));
     } else {
@@ -153,7 +151,6 @@ export function BitacoraDetailPanel({
       .eq("bitacora_id", bitacoraId)
       .order("due_date");
     setActivities(acts ?? []);
-    setObservationsDraft(Object.fromEntries((acts ?? []).map((a) => [a.id, a.observations ?? ""])));
     await loadChecklistCounts(supabase, (acts ?? []).map((a) => a.id));
   }
 
@@ -278,14 +275,6 @@ export function BitacoraDetailPanel({
   async function toggleActivityDone(activity) {
     const supabase = createClient();
     await supabase.from("bitacora_activities").update({ is_done: !activity.is_done }).eq("id", activity.id);
-    reloadActivities();
-  }
-
-  async function saveObservations(activity) {
-    const text = observationsDraft[activity.id] ?? "";
-    if (text === (activity.observations ?? "")) return;
-    const supabase = createClient();
-    await supabase.from("bitacora_activities").update({ observations: text || null }).eq("id", activity.id);
     reloadActivities();
   }
 
@@ -656,25 +645,6 @@ export function BitacoraDetailPanel({
                                 </div>
                               )}
                             </div>
-
-                            {editable ? (
-                              <textarea
-                                value={observationsDraft[activity.id] ?? ""}
-                                onChange={(e) =>
-                                  setObservationsDraft((prev) => ({ ...prev, [activity.id]: e.target.value }))
-                                }
-                                onBlur={() => saveObservations(activity)}
-                                placeholder="Observaciones (opcional)..."
-                                rows={2}
-                                className="mt-2 w-full rounded-md border border-border bg-white px-2.5 py-1.5 text-xs outline-none focus:border-foreground"
-                              />
-                            ) : (
-                              activity.observations && (
-                                <p className="mt-2 rounded-md bg-neutral-50 px-2.5 py-1.5 text-xs text-muted-foreground">
-                                  {activity.observations}
-                                </p>
-                              )
-                            )}
                           </div>
                         );
                       })}
