@@ -533,34 +533,41 @@ export default function ReunionDetallePage() {
       {/* Compromisos + agenda */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex min-h-0 flex-col rounded-[var(--radius-card)] border border-border bg-surface shadow-sm">
-          <form onSubmit={handleAddItem} className="flex shrink-0 flex-col gap-2 border-b border-border p-4">
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe el compromiso que salió de la reunión..."
-              rows={2}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
-            <div className="flex flex-wrap gap-2">
-              <div className="min-w-[180px] flex-1">
-                <FilterDropdown
-                  placeholder="Responsable sugerido *"
-                  value={suggestedValue}
-                  onChange={setSuggestedValue}
-                  options={responsibleOptions}
-                />
+          {canSchedule && (
+            <form onSubmit={handleAddItem} className="flex shrink-0 flex-col gap-2 border-b border-border p-4">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe el compromiso que salió de la reunión..."
+                rows={2}
+                className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+              />
+              <div className="flex flex-wrap gap-2">
+                <div className="min-w-[180px] flex-1">
+                  <FilterDropdown
+                    placeholder="Responsable sugerido *"
+                    value={suggestedValue}
+                    onChange={setSuggestedValue}
+                    options={responsibleOptions}
+                  />
+                </div>
+                <DatePicker value={suggestedDueDate} onChange={setSuggestedDueDate} placeholder="Fecha sugerida *" />
+                <button
+                  type="submit"
+                  disabled={adding || !description.trim()}
+                  className="rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
+                >
+                  Agregar compromiso
+                </button>
               </div>
-              <DatePicker value={suggestedDueDate} onChange={setSuggestedDueDate} placeholder="Fecha sugerida *" />
-              <button
-                type="submit"
-                disabled={adding || !description.trim()}
-                className="rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
-              >
-                Agregar compromiso
-              </button>
-            </div>
-            {addError && <p className="text-xs text-status-overdue">{addError}</p>}
-          </form>
+              {addError && <p className="text-xs text-status-overdue">{addError}</p>}
+            </form>
+          )}
+          {!canSchedule && (
+            <p className="shrink-0 border-b border-border p-4 text-xs text-muted-foreground">
+              Solo el moderador de la reunión puede registrar compromisos.
+            </p>
+          )}
 
           <div className="flex-1 min-h-0 overflow-y-auto p-4">
             {pendingItems.length === 0 ? (

@@ -18,6 +18,7 @@ export default function ReunionesPage() {
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLider, setIsLider] = useState(false);
   const [meetings, setMeetings] = useState([]);
   const [profileNames, setProfileNames] = useState({});
   const [profiles, setProfiles] = useState([]);
@@ -38,6 +39,7 @@ export default function ReunionesPage() {
     if (user) {
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
       setIsAdmin(profile?.role === "admin");
+      setIsLider(profile?.role === "lider");
     }
 
     const { data } = await supabase
@@ -82,13 +84,15 @@ export default function ReunionesPage() {
         <p className="text-sm text-muted-foreground">
           Registra reuniones y agenda sus tareas directamente en el calendario de cada participante.
         </p>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex shrink-0 items-center gap-1.5 rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"
-        >
-          <PlusIcon />
-          Nueva reunión
-        </button>
+        {(isAdmin || isLider) && (
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex shrink-0 items-center gap-1.5 rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"
+          >
+            <PlusIcon />
+            Nueva reunión
+          </button>
+        )}
       </div>
 
       <SegmentedControl options={TABS} value={tab} onChange={setTab} />

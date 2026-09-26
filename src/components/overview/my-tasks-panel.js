@@ -7,31 +7,25 @@ import { Pagination } from "@/components/ui/pagination";
 import { BITACORA_STATUS, bitacoraStatusKey, dueSemaphore } from "@/lib/status";
 import { fetchUrgentActivityBitacoraIds } from "@/lib/bitacoras";
 import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { AlertIcon } from "@/components/icons";
 import { CountryCodeTag } from "@/components/ui/country-tag";
+import { AreaTag } from "@/components/ui/area-tag";
 
 const PAGE_SIZE = 6;
 
-const QUICK_FILTERS = [
-  { id: "vencidas", label: "Vencidas" },
-  { id: "hoy", label: "Hoy" },
-  { id: "manana", label: "Mañana" },
-  { id: "7dias", label: "7 días" },
-  { id: "todas", label: "Todas" },
-];
-
 export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged }) {
   const [users, setUsers] = useState([]);
+  const [areas, setAreas] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(currentUserId);
+  const [areaFilter, setAreaFilter] = useState("");
   const [bitacoras, setBitacoras] = useState([]);
   const [urgentIds, setUrgentIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("todas");
   const [page, setPage] = useState(1);
   const [drawerId, setDrawerId] = useState(null);
   const [paisesById, setPaisesById] = useState({});
+  const [areasById, setAreasById] = useState({});
   const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
@@ -40,6 +34,14 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
       .from("paises")
       .select("*")
       .then(({ data }) => setPaisesById(Object.fromEntries((data ?? []).map((p) => [p.id, p]))));
+    supabase
+      .from("areas")
+      .select("*")
+      .order("name")
+      .then(({ data }) => {
+        setAreas(data ?? []);
+        setAreasById(Object.fromEntries((data ?? []).map((a) => [a.id, a])));
+      });
   }, []);
 
   useEffect(() => {
@@ -109,29 +111,9 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
   const visible = useMemo(() => {
     // finalizadas ocultas por defecto
     let list = bitacoras.filter((b) => b.status !== "finalizado");
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    list = list.filter((b) => {
-      const due = new Date(b.due_date + "T00:00:00");
-      const diffDays = Math.round((due - today) / 86400000);
-      switch (filter) {
-        case "vencidas":
-          return diffDays < 0;
-        case "hoy":
-          return diffDays === 0;
-        case "manana":
-          return diffDays === 1;
-        case "7dias":
-          return diffDays >= 0 && diffDays <= 7;
-        default:
-          return true;
-      }
-    });
-
+    if (areaFilter) list = list.filter((b) => b.area_id === areaFilter);
     return list.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
-  }, [bitacoras, filter]);
+  }, [bitacoras, areaFilter]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const pageItems = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -141,27 +123,32 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
         <h2 className="shrink-0 text-sm font-semibold">Bitácora</h2>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <SegmentedControl
-            options={QUICK_FILTERS}
-            value={filter}
-            onChange={(id) => {
-              setFilter(id);
-              setPage(1);
-            }}
-          />
-          {isAdmin && users.length > 0 && (
-            <FilterDropdown
-              placeholder="Todos los encargados"
-              value={selectedUserId}
-              onChange={(v) => {
-                setSelectedUserId(v);
-                setPage(1);
-              }}
-              options={users.map((u) => ({ value: u.id, label: u.name }))}
-            />
-          )}
-        </div>
+        {isAdmin && (
+          <div className="flex flex-wrap items-center gap-2">
+            {areas.length > 0 && (
+              <FilterDropdown
+                placeholder="Todas las áreas"
+                value={areaFilter}
+                onChange={(v) => {
+                  setAreaFilter(v);
+                  setPage(1);
+                }}
+                options={areas.map((a) => ({ value: a.id, label: a.name }))}
+              />
+            )}
+            {users.length > 0 && (
+              <FilterDropdown
+                placeholder="Todos los encargados"
+                value={selectedUserId}
+                onChange={(v) => {
+                  setSelectedUserId(v);
+                  setPage(1);
+                }}
+                options={users.map((u) => ({ value: u.id, label: u.name }))}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -176,6 +163,7 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
               <DueDot color={dueSemaphore(b.due_date)} />
               <CountryCodeTag pais={paisesById[b.pais_id]} />
               <span className="min-w-0 flex-1 truncate text-sm">{b.name}</span>
+              <AreaTag area={areasById[b.area_id]} className="hidden sm:inline-flex" />
               {urgentIds.has(b.id) && (
                 <span
                   title="Tiene una actividad que vence hoy o ya está vencida"
