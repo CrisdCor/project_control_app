@@ -4,18 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { UserFormModal } from "@/components/usuarios/user-form-modal";
+import { AreasModal } from "@/components/usuarios/areas-modal";
 import { deleteUserAction } from "@/app/(app)/usuarios/actions";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { AreaTag } from "@/components/ui/area-tag";
 import { PlusIcon } from "@/components/icons";
 
 export default function UsuariosPage() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(null); // null = cargando
   const [users, setUsers] = useState([]);
+  const [areasById, setAreasById] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [areasModalOpen, setAreasModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
@@ -38,8 +42,12 @@ export default function UsuariosPage() {
       setIsAdmin(profile?.role === "admin");
     }
 
-    const { data } = await supabase.from("profiles").select("*").order("name");
+    const [{ data }, { data: areasData }] = await Promise.all([
+      supabase.from("profiles").select("*").order("name"),
+      supabase.from("areas").select("*").order("name"),
+    ]);
     setUsers(data ?? []);
+    setAreasById(Object.fromEntries((areasData ?? []).map((a) => [a.id, a])));
     setLoading(false);
   }
 
@@ -95,9 +103,17 @@ export default function UsuariosPage() {
           onChange={setRoleFilter}
           options={[
             { value: "admin", label: "Administrador" },
+            { value: "lider", label: "Líder" },
             { value: "gestor", label: "Gestor" },
           ]}
         />
+
+        <button
+          onClick={() => setAreasModalOpen(true)}
+          className="rounded-md border border-border px-3 py-2 text-sm transition hover:bg-neutral-50"
+        >
+          Áreas
+        </button>
 
         <button
           onClick={() => {
@@ -148,10 +164,12 @@ export default function UsuariosPage() {
                     </div>
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{u.area || "—"}</td>
+                  <td className="px-5 py-3">
+                    <AreaTag area={areasById[u.area_id]} />
+                  </td>
                   <td className="px-5 py-3 text-muted-foreground">{u.cargo || "—"}</td>
                   <td className="px-5 py-3 text-muted-foreground">
-                    {u.role === "admin" ? "Administrador" : "Gestor"}
+                    {u.role === "admin" ? "Administrador" : u.role === "lider" ? "Líder" : "Gestor"}
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex justify-end gap-2">
@@ -186,6 +204,7 @@ export default function UsuariosPage() {
         user={editingUser}
         onSaved={load}
       />
+      <AreasModal open={areasModalOpen} onClose={() => setAreasModalOpen(false)} onChanged={load} />
     </div>
   );
 }

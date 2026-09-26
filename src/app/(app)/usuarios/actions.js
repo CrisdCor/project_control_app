@@ -52,7 +52,7 @@ export async function createUserAction(formData) {
 
   const name = formData.get("name")?.toString().trim();
   const email = formData.get("email")?.toString().trim();
-  const area = formData.get("area")?.toString().trim() || null;
+  const areaId = formData.get("area_id")?.toString() || null;
   const cargo = formData.get("cargo")?.toString().trim() || null;
   const role = formData.get("role")?.toString();
   const password = formData.get("password")?.toString();
@@ -81,7 +81,7 @@ export async function createUserAction(formData) {
     id: newUserId,
     name,
     email,
-    area,
+    area_id: areaId,
     cargo,
     role,
     photo_url: photoUrl,
@@ -103,7 +103,7 @@ export async function updateUserAction(formData) {
   const id = formData.get("id")?.toString();
   const name = formData.get("name")?.toString().trim();
   const email = formData.get("email")?.toString().trim();
-  const area = formData.get("area")?.toString().trim() || null;
+  const areaId = formData.get("area_id")?.toString() || null;
   const cargo = formData.get("cargo")?.toString().trim() || null;
   const role = formData.get("role")?.toString();
   const newPassword = formData.get("password")?.toString();
@@ -125,7 +125,7 @@ export async function updateUserAction(formData) {
 
   const photoUrl = await uploadPhotoIfPresent(admin, id, formData);
 
-  const patch = { name, email, area, cargo, role };
+  const patch = { name, email, area_id: areaId, cargo, role };
   if (photoUrl) patch.photo_url = photoUrl;
 
   const { error: profileError } = await admin.from("profiles").update(patch).eq("id", id);

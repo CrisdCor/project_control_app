@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { AreaTag } from "@/components/ui/area-tag";
+
+const ROLE_LABELS = { admin: "Administrador", lider: "Líder", gestor: "Gestor" };
 
 export default function PerfilPage() {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
+  const [area, setArea] = useState(null);
   const [name, setName] = useState("");
-  const [area, setArea] = useState("");
   const [cargo, setCargo] = useState("");
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -29,14 +32,17 @@ export default function PerfilPage() {
       if (!user) return;
       const { data } = await supabase
         .from("profiles")
-        .select("id, name, email, area, cargo, role, photo_url")
+        .select("id, name, email, area_id, cargo, role, photo_url")
         .eq("id", user.id)
         .maybeSingle();
       if (data) {
         setProfile(data);
         setName(data.name ?? "");
-        setArea(data.area ?? "");
         setCargo(data.cargo ?? "");
+        if (data.area_id) {
+          const { data: areaData } = await supabase.from("areas").select("*").eq("id", data.area_id).maybeSingle();
+          setArea(areaData ?? null);
+        }
       }
     })();
   }, []);
@@ -48,7 +54,9 @@ export default function PerfilPage() {
     setError(null);
 
     const supabase = createClient();
-    const patch = { name, area, cargo };
+    // área y rol no son autoeditables: ahora determinan permisos y visibilidad,
+    // así que quedan a cargo exclusivamente del administrador desde Usuarios
+    const patch = { name, cargo };
 
     if (photoFile) {
       const ext = photoFile.name.split(".").pop() || "jpg";
@@ -167,14 +175,23 @@ export default function PerfilPage() {
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Área</label>
-          <input
-            value={area}
-            onChange={(e) => setArea(e.target.value)}
-            className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-          />
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="mb-1.5 block text-sm font-medium">Área</label>
+            <div className="flex h-[38px] items-center rounded-md border border-border bg-neutral-50 px-3">
+              {area ? <AreaTag area={area} /> : <span className="text-sm text-muted-foreground">Sin área</span>}
+            </div>
+          </div>
+          <div className="flex-1">
+            <label className="mb-1.5 block text-sm font-medium">Rol</label>
+            <div className="flex h-[38px] items-center rounded-md border border-border bg-neutral-50 px-3 text-sm text-muted-foreground">
+              {ROLE_LABELS[profile.role] ?? profile.role}
+            </div>
+          </div>
         </div>
+        <p className="-mt-2 text-xs text-muted-foreground">
+          El área y el rol los administra el administrador desde Usuarios.
+        </p>
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Cargo</label>

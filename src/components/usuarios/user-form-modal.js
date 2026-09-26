@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { createClient } from "@/lib/supabase/client";
 import { createUserAction, updateUserAction } from "@/app/(app)/usuarios/actions";
 
 export function UserFormModal({ open, onClose, user, onSaved }) {
@@ -9,7 +11,8 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
 
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
-  const [area, setArea] = useState(user?.area ?? "");
+  const [areaId, setAreaId] = useState(user?.area_id ?? "");
+  const [areas, setAreas] = useState([]);
   const [cargo, setCargo] = useState(user?.cargo ?? "");
   const [role, setRole] = useState(user?.role ?? "gestor");
   const [password, setPassword] = useState("");
@@ -18,10 +21,20 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => {
+    if (!open) return;
+    const supabase = createClient();
+    supabase
+      .from("areas")
+      .select("*")
+      .order("name")
+      .then(({ data }) => setAreas(data ?? []));
+  }, [open]);
+
   function resetAndClose() {
     setName("");
     setEmail("");
-    setArea("");
+    setAreaId("");
     setCargo("");
     setRole("gestor");
     setPassword("");
@@ -38,7 +51,7 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
     const formData = new FormData();
     formData.set("name", name);
     formData.set("email", email);
-    formData.set("area", area);
+    formData.set("area_id", areaId);
     formData.set("cargo", cargo);
     formData.set("role", role);
     if (password) formData.set("password", password);
@@ -84,10 +97,11 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
         <div className="flex gap-3">
           <div className="flex flex-1 flex-col gap-1.5">
             <label className="text-sm font-medium">Área</label>
-            <input
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+            <FilterDropdown
+              placeholder="Sin área"
+              value={areaId}
+              onChange={setAreaId}
+              options={areas.map((a) => ({ value: a.id, label: a.name }))}
             />
           </div>
           <div className="flex flex-1 flex-col gap-1.5">
@@ -108,8 +122,14 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
             className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
           >
             <option value="gestor">Gestor</option>
+            <option value="lider">Líder</option>
             <option value="admin">Administrador</option>
           </select>
+          {role === "lider" && !areaId && (
+            <p className="text-xs text-status-attention">
+              Un líder necesita un área asignada para poder crear y gestionar bitácoras.
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -158,3 +178,4 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
     </Modal>
   );
 }
+
