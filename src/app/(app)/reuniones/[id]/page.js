@@ -5,11 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { MeetingChecklistDrawer } from "@/components/reuniones/meeting-checklist-drawer";
 import { CountryCodeTag } from "@/components/ui/country-tag";
-import { TrashIcon, PencilIcon, ArchiveIcon } from "@/components/icons";
+import { TrashIcon, PencilIcon, ArchiveIcon, PlusIcon } from "@/components/icons";
 import { localTodayISO as todayISO } from "@/lib/dates";
 
 const EXTERNAL_PREFIX = "ext:";
@@ -45,6 +46,11 @@ export default function ReunionDetallePage() {
   const [moderatorDraft, setModeratorDraft] = useState("");
   const [participantIdsDraft, setParticipantIdsDraft] = useState([]);
   const [paisDraft, setPaisDraft] = useState(GENERAL_PAIS_ID);
+  const [dateDraft, setDateDraft] = useState("");
+  const [startTimeDraft, setStartTimeDraft] = useState("");
+  const [endTimeDraft, setEndTimeDraft] = useState("");
+  const [externalDraft, setExternalDraft] = useState([]);
+  const [externalNameDraft, setExternalNameDraft] = useState("");
   const [savingDetail, setSavingDetail] = useState(false);
 
   // nuevo compromiso
@@ -165,17 +171,41 @@ export default function ReunionDetallePage() {
     setModeratorDraft(meeting.moderator_id ?? "");
     setParticipantIdsDraft(otherParticipants.map((p) => p.id));
     setPaisDraft(meeting.pais_id ?? GENERAL_PAIS_ID);
+    setDateDraft(meeting.meeting_date);
+    setStartTimeDraft(meeting.start_time ?? "");
+    setEndTimeDraft(meeting.end_time ?? "");
+    setExternalDraft(meeting.external_participants ?? []);
+    setExternalNameDraft("");
     setEditingDetail(true);
   }
 
+  function addExternalDraft() {
+    const name = externalNameDraft.trim();
+    if (!name || externalDraft.includes(name)) return;
+    setExternalDraft((prev) => [...prev, name]);
+    setExternalNameDraft("");
+  }
+
+  function removeExternalDraft(name) {
+    setExternalDraft((prev) => prev.filter((n) => n !== name));
+  }
+
   async function handleSaveDetail() {
-    if (!titleDraft.trim() || !moderatorDraft) return;
+    if (!titleDraft.trim() || !moderatorDraft || !dateDraft) return;
     setSavingDetail(true);
     const supabase = createClient();
 
     await supabase
       .from("meetings")
-      .update({ title: titleDraft.trim(), moderator_id: moderatorDraft, pais_id: paisDraft })
+      .update({
+        title: titleDraft.trim(),
+        moderator_id: moderatorDraft,
+        pais_id: paisDraft,
+        meeting_date: dateDraft,
+        start_time: startTimeDraft || null,
+        end_time: endTimeDraft || null,
+        external_participants: externalDraft,
+      })
       .eq("id", id);
 
     const finalParticipantIds = [...new Set([...participantIdsDraft, moderatorDraft])];
@@ -345,6 +375,20 @@ export default function ReunionDetallePage() {
               className="rounded-md border border-border bg-white px-2.5 py-1.5 text-base font-semibold outline-none focus:border-foreground"
             />
             <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Fecha</label>
+              <DatePicker value={dateDraft} onChange={setDateDraft} />
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Inicio</label>
+                <TimePicker value={startTimeDraft} onChange={setStartTimeDraft} placeholder="Inicio" />
+              </div>
+              <div className="flex-1">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Fin</label>
+                <TimePicker value={endTimeDraft} onChange={setEndTimeDraft} placeholder="Fin" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Moderador</label>
               <FilterDropdown
                 placeholder="Selecciona un moderador"
@@ -364,6 +408,50 @@ export default function ReunionDetallePage() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Participantes externos</label>
+              <div className="flex gap-2">
+                <input
+                  value={externalNameDraft}
+                  onChange={(e) => setExternalNameDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addExternalDraft();
+                    }
+                  }}
+                  placeholder="Nombre de la persona..."
+                  className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+                />
+                <button
+                  type="button"
+                  onClick={addExternalDraft}
+                  className="flex items-center gap-1 rounded-md border border-border px-3 py-2 text-xs font-medium transition hover:bg-neutral-50"
+                >
+                  <PlusIcon />
+                  Agregar
+                </button>
+              </div>
+              {externalDraft.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {externalDraft.map((name) => (
+                    <span
+                      key={name}
+                      className="flex items-center gap-1.5 rounded-full border border-border bg-neutral-50 px-2.5 py-1 text-xs"
+                    >
+                      {name}
+                      <button
+                        type="button"
+                        onClick={() => removeExternalDraft(name)}
+                        className="text-muted-foreground hover:text-status-overdue"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">País</label>
               <FilterDropdown
                 allowClear={false}
@@ -375,7 +463,7 @@ export default function ReunionDetallePage() {
             <div className="flex gap-2">
               <button
                 onClick={handleSaveDetail}
-                disabled={savingDetail || !titleDraft.trim() || !moderatorDraft}
+                disabled={savingDetail || !titleDraft.trim() || !moderatorDraft || !dateDraft}
                 className="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
               >
                 Guardar
