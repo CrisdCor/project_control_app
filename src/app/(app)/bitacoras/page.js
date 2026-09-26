@@ -8,12 +8,15 @@ import { fetchUrgentActivityBitacoraIds } from "@/lib/bitacoras";
 import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
 import { PaisesModal } from "@/components/bitacoras/paises-modal";
 import { CountryTag } from "@/components/ui/country-tag";
+import { AreaTag } from "@/components/ui/area-tag";
 import { PlusIcon, TrashIcon, AlertIcon } from "@/components/icons";
 
 export default function BitacorasPage() {
   const [isAdmin, setIsAdmin] = useState(null);
+  const [isLider, setIsLider] = useState(false);
   const [bitacoras, setBitacoras] = useState([]);
   const [paisesById, setPaisesById] = useState({});
+  const [areasById, setAreasById] = useState({});
   const [urgentIds, setUrgentIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [drawerId, setDrawerId] = useState(null);
@@ -31,13 +34,18 @@ export default function BitacorasPage() {
     if (user) {
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
       setIsAdmin(profile?.role === "admin");
+      setIsLider(profile?.role === "lider");
     }
 
     const { data } = await supabase.from("v_bitacora_status").select("*");
     const rows = data ?? [];
 
-    const { data: paises } = await supabase.from("paises").select("*");
+    const [{ data: paises }, { data: areas }] = await Promise.all([
+      supabase.from("paises").select("*"),
+      supabase.from("areas").select("*"),
+    ]);
     setPaisesById(Object.fromEntries((paises ?? []).map((p) => [p.id, p])));
+    setAreasById(Object.fromEntries((areas ?? []).map((a) => [a.id, a])));
 
     const encargadoIds = [...new Set(rows.map((b) => b.encargado_id).filter(Boolean))];
     let nameMap = {};
@@ -76,7 +84,9 @@ export default function BitacorasPage() {
     load();
   }
 
-  if (isAdmin === false) {
+  const canManage = isAdmin || isLider;
+
+  if (isAdmin === false && !isLider) {
     return <p className="text-sm text-muted-foreground">No tienes acceso a esta sección.</p>;
   }
 
@@ -86,14 +96,16 @@ export default function BitacorasPage() {
         <p className="text-sm text-muted-foreground">
           Cada bitácora agrupa las actividades que se llevan a cabo para cumplirla.
         </p>
-        {isAdmin && (
+        {canManage && (
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              onClick={() => setPaisesModalOpen(true)}
-              className="rounded-md border border-border px-3 py-2 text-sm transition hover:bg-neutral-50"
-            >
-              Países
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setPaisesModalOpen(true)}
+                className="rounded-md border border-border px-3 py-2 text-sm transition hover:bg-neutral-50"
+              >
+                Países
+              </button>
+            )}
             <button
               onClick={() => setCreating(true)}
               className="flex items-center gap-1.5 rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"
@@ -116,6 +128,7 @@ export default function BitacorasPage() {
               <tr className="border-b border-border text-left text-xs text-muted-foreground">
                 <th className="px-5 py-3 font-medium">Bitácora</th>
                 <th className="px-5 py-3 font-medium">País</th>
+                <th className="px-5 py-3 font-medium">Área</th>
                 <th className="px-5 py-3 font-medium">Encargado</th>
                 <th className="px-5 py-3 font-medium">Fecha límite</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
@@ -140,6 +153,9 @@ export default function BitacorasPage() {
                   </td>
                   <td className="px-5 py-3">
                     <CountryTag pais={paisesById[b.pais_id]} />
+                  </td>
+                  <td className="px-5 py-3">
+                    <AreaTag area={areasById[b.area_id]} />
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{b.encargadoName}</td>
                   <td className="px-5 py-3 text-muted-foreground">
@@ -178,7 +194,9 @@ export default function BitacorasPage() {
         fullAccess
       />
       <BitacoraDrawer open={creating} onClose={() => setCreating(false)} bitacoraId={null} onSaved={load} fullAccess />
-      <PaisesModal open={paisesModalOpen} onClose={() => setPaisesModalOpen(false)} onChanged={load} />
+      {isAdmin && (
+        <PaisesModal open={paisesModalOpen} onClose={() => setPaisesModalOpen(false)} onChanged={load} />
+      )}
     </div>
   );
 }

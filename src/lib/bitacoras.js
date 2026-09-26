@@ -1,18 +1,29 @@
 import { localTodayISO as todayISO } from "@/lib/dates";
 
-// Bitácoras donde el usuario es encargado o tiene alguna actividad asignada.
-// Se usa de forma explícita (en vez de confiar solo en RLS) porque para el admin
-// las políticas de seguridad devuelven TODAS las bitácoras a propósito — y estas
-// vistas son de uso personal, deben reflejar solo lo propio incluso siendo admin.
+// Bitácoras donde el usuario es encargado, tiene alguna actividad asignada, o
+// pertenece a la misma área (las bitácoras de área son visibles para todos los
+// que pertenecen a ella, no solo para quien las creó). Se consulta de forma
+// explícita (en vez de confiar solo en RLS) porque para el admin las políticas
+// de seguridad devuelven TODAS las bitácoras a propósito — y estas vistas son
+// de uso personal, deben reflejar solo lo propio incluso siendo admin.
 export async function fetchMyBitacoraIds(supabase, userId) {
-  const [{ data: encargadoRows }, { data: activityRows }] = await Promise.all([
+  const [{ data: encargadoRows }, { data: activityRows }, { data: profile }] = await Promise.all([
     supabase.from("bitacoras").select("id").eq("encargado_id", userId),
     supabase.from("bitacora_activities").select("bitacora_id").eq("assigned_to", userId),
+    supabase.from("profiles").select("area_id").eq("id", userId).maybeSingle(),
   ]);
+
+  let areaRows = [];
+  if (profile?.area_id) {
+    const { data } = await supabase.from("bitacoras").select("id").eq("area_id", profile.area_id);
+    areaRows = data ?? [];
+  }
+
   return [
     ...new Set([
       ...(encargadoRows ?? []).map((r) => r.id),
       ...(activityRows ?? []).map((r) => r.bitacora_id),
+      ...areaRows.map((r) => r.id),
     ]),
   ];
 }

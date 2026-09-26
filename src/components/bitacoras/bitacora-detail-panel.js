@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/status/status-badge";
 import { BITACORA_STATUS, bitacoraStatusKey } from "@/lib/status";
 import { CheckSquareIcon } from "@/components/icons";
 import { CountryTag } from "@/components/ui/country-tag";
+import { AreaTag } from "@/components/ui/area-tag";
 
 function formatDate(d) {
   if (!d) return "";
@@ -29,8 +30,11 @@ export function BitacoraDetailPanel({
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLider, setIsLider] = useState(false);
+  const [myAreaId, setMyAreaId] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [paises, setPaises] = useState([]);
+  const [areas, setAreas] = useState([]);
   const [bitacora, setBitacora] = useState(null);
   const [activities, setActivities] = useState([]);
   const [checklistCounts, setChecklistCounts] = useState({});
@@ -42,6 +46,7 @@ export function BitacoraDetailPanel({
   const [dueDate, setDueDate] = useState("");
   const [encargadoId, setEncargadoId] = useState("");
   const [paisId, setPaisId] = useState("00000000-0000-0000-0000-000000000001");
+  const [areaId, setAreaId] = useState("");
 
   const [activityDetail, setActivityDetail] = useState("");
   const [activityDueDate, setActivityDueDate] = useState("");
@@ -92,14 +97,19 @@ export function BitacoraDetailPanel({
     } = await supabase.auth.getUser();
     setCurrentUserId(user?.id ?? null);
 
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("role, area_id").eq("id", user.id).maybeSingle();
     setIsAdmin(profile?.role === "admin");
+    setIsLider(profile?.role === "lider");
+    setMyAreaId(profile?.area_id ?? null);
 
-    const { data: allProfiles } = await supabase.from("profiles").select("id, name").order("name");
+    const { data: allProfiles } = await supabase.from("profiles").select("id, name, role, area_id").order("name");
     setProfiles(allProfiles ?? []);
 
     const { data: allPaises } = await supabase.from("paises").select("*").order("name");
     setPaises(allPaises ?? []);
+
+    const { data: allAreas } = await supabase.from("areas").select("*").order("name");
+    setAreas(allAreas ?? []);
 
     if (!isCreate) {
       const { data: b } = await supabase.from("v_bitacora_status").select("*").eq("id", bitacoraId).maybeSingle();
@@ -109,6 +119,7 @@ export function BitacoraDetailPanel({
         setDueDate(b.due_date);
         setEncargadoId(b.encargado_id ?? "");
         setPaisId(b.pais_id ?? "00000000-0000-0000-0000-000000000001");
+        setAreaId(b.area_id ?? "");
       }
 
       const { data: acts } = await supabase
@@ -124,6 +135,8 @@ export function BitacoraDetailPanel({
       setDueDate("");
       setEncargadoId("");
       setActivities([]);
+      // el líder solo puede crear en su propia área; el admin puede elegir
+      setAreaId(profile?.role === "lider" ? (profile?.area_id ?? "") : "");
     }
 
     setLoading(false);
@@ -171,6 +184,7 @@ export function BitacoraDetailPanel({
         due_date: dueDate,
         encargado_id: encargadoId,
         pais_id: paisId,
+        area_id: areaId || null,
         created_by: currentUserId,
       })
       .select()
@@ -196,10 +210,13 @@ export function BitacoraDetailPanel({
     setSaving(true);
     const supabase = createClient();
     const patch = { name: name.trim() };
-    if (isAdmin) {
+    if (isAdmin || isLiderOfArea) {
       patch.due_date = dueDate;
       patch.encargado_id = encargadoId;
       patch.pais_id = paisId;
+    }
+    if (isAdmin) {
+      patch.area_id = areaId || null;
     }
     const { error: updateError } = await supabase.from("bitacoras").update(patch).eq("id", bitacoraId);
 
@@ -212,11 +229,12 @@ export function BitacoraDetailPanel({
     if (closeOnSave) onClose?.();
   }
 
-  // admin: finaliza y aprueba de una vez. encargado (no admin): queda pendiente de aprobación.
+  // admin o líder del área: finaliza y aprueba de una vez. encargado simple (no
+  // admin/líder): queda pendiente de aprobación.
   async function markCompleted() {
     const supabase = createClient();
     const now = new Date().toISOString();
-    const patch = isAdmin ? { completed_at: now, finished_at: now } : { completed_at: now };
+    const patch = isAdmin || isLiderOfArea ? { completed_at: now, finished_at: now } : { completed_at: now };
     await supabase.from("bitacoras").update(patch).eq("id", bitacoraId);
     reloadBitacoraOnly();
   }
@@ -366,11 +384,21 @@ export function BitacoraDetailPanel({
   }
 
   const isEncargado = !isCreate && bitacora?.encargado_id === currentUserId;
-  const canEditName = isCreate || isAdmin || isEncargado;
-  const canEditDueDateEncargado = isCreate || isAdmin; // fecha límite y encargado: solo admin
-  const canFinish = isAdmin || isEncargado;
-  const canManageActivities = isAdmin || isEncargado;
-  const canTouchActivity = (activity) => isAdmin || isEncargado || activity.assigned_to === currentUserId;
+  const isLiderOfArea = isCreate
+    ? isLider
+    : isLider && bitacora?.area_id && bitacora.area_id === myAreaId;
+  const canEditName = isCreate || isAdmin || isEncargado || isLiderOfArea;
+  const canEditDueDateEncargado = isCreate || isAdmin || isLiderOfArea; // fecha límite, encargado y país
+  const canFinish = isAdmin || isEncargado || isLiderOfArea;
+  const canApprove = isAdmin || isLiderOfArea; // aprobar/rechazar: no el simple encargado
+  const canManageActivities = isAdmin || isEncargado || isLiderOfArea;
+  const canTouchActivity = (activity) => isAdmin || isEncargado || isLiderOfArea || activity.assigned_to === currentUserId;
+
+  // el líder solo puede elegir, como encargado o responsable de actividad, a sí
+  // mismo o a gestores de su propia área; el admin no tiene esa restricción
+  const selectableProfiles = isAdmin
+    ? profiles
+    : profiles.filter((p) => p.id === currentUserId || (p.role === "gestor" && p.area_id === myAreaId));
 
   const selectedActivity = activities.find((a) => a.id === selectedActivityId);
   const canEditChecklist = selectedActivity && canTouchActivity(selectedActivity);
@@ -412,6 +440,7 @@ export function BitacoraDetailPanel({
                   <span className="flex items-center gap-2 text-xs text-muted-foreground">
                     Fecha límite: {formatDate(bitacora.due_date)}
                     <CountryTag pais={paises.find((p) => p.id === bitacora.pais_id)} />
+                    <AreaTag area={areas.find((a) => a.id === bitacora.area_id)} />
                   </span>
                   <StatusBadge status={bitacoraStatusKey(bitacora)} map={BITACORA_STATUS} />
                 </div>
@@ -436,10 +465,24 @@ export function BitacoraDetailPanel({
                       allowClear={false}
                       value={encargadoId}
                       onChange={setEncargadoId}
-                      options={profiles.map((p) => ({ value: p.id, label: p.name }))}
+                      options={selectableProfiles.map((p) => ({ value: p.id, label: p.name }))}
                     />
                     {!canEditDueDateEncargado && (
                       <p className="text-xs text-muted-foreground">Solo el administrador puede reasignar el encargado.</p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium">Área</label>
+                    <FilterDropdown
+                      placeholder="Sin área"
+                      value={areaId}
+                      onChange={setAreaId}
+                      options={areas.map((a) => ({ value: a.id, label: a.name }))}
+                      disabled={!isAdmin}
+                    />
+                    {!isAdmin && (
+                      <p className="text-xs text-muted-foreground">Solo el administrador puede reasignar el área.</p>
                     )}
                   </div>
 
@@ -480,13 +523,13 @@ export function BitacoraDetailPanel({
                 </form>
               )}
 
-              {!isCreate && (canFinish || (isAdmin && bitacora?.completed_at)) && (
+              {!isCreate && (canFinish || (canApprove && bitacora?.completed_at)) && (
                 <div className="rounded-md border border-border p-4">
                   <h3 className="mb-2 text-sm font-semibold">Cierre de la bitácora</h3>
                   {bitacora?.finished_at ? (
                     <div className="flex flex-col gap-2 text-sm">
                       <p>Finalizada el {new Date(bitacora.finished_at).toLocaleDateString("es-CO")}</p>
-                      {isAdmin && (
+                      {canApprove && (
                         <button
                           onClick={reopenBitacora}
                           className="self-start rounded-md border border-border px-3 py-1.5 text-xs transition hover:bg-neutral-50"
@@ -502,7 +545,7 @@ export function BitacoraDetailPanel({
                         {new Date(bitacora.completed_at).toLocaleDateString("es-CO")}
                       </p>
                       <div className="flex gap-2">
-                        {isAdmin ? (
+                        {canApprove ? (
                           <>
                             <button
                               onClick={approveBitacora}
@@ -534,7 +577,7 @@ export function BitacoraDetailPanel({
                       onClick={markCompleted}
                       className="self-start rounded-md bg-status-done px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
                     >
-                      {isAdmin ? "Marcar como finalizada" : "Marcar como cerrada"}
+                      {isAdmin || isLiderOfArea ? "Marcar como finalizada" : "Marcar como cerrada"}
                     </button>
                   )}
                 </div>
@@ -572,7 +615,7 @@ export function BitacoraDetailPanel({
                               <div className="flex flex-wrap gap-2">
                                 <div className="min-w-[160px] flex-1">
                                   <MultiSelectDropdown
-                                    options={profiles.map((p) => ({ id: p.id, name: p.name }))}
+                                    options={selectableProfiles.map((p) => ({ id: p.id, name: p.name }))}
                                     selectedIds={editAssignee ? [editAssignee] : []}
                                     onChange={(ids) => setEditAssignee(ids[ids.length - 1] ?? "")}
                                     placeholder="Responsable de la actividad"
@@ -663,7 +706,7 @@ export function BitacoraDetailPanel({
                       <div className="flex flex-wrap gap-2">
                         <div className="min-w-[160px] flex-1">
                           <MultiSelectDropdown
-                            options={profiles.map((p) => ({ id: p.id, name: p.name }))}
+                            options={selectableProfiles.map((p) => ({ id: p.id, name: p.name }))}
                             selectedIds={activityAssignee ? [activityAssignee] : []}
                             onChange={(ids) => setActivityAssignee(ids[ids.length - 1] ?? "")}
                             placeholder="Responsable de la actividad"
