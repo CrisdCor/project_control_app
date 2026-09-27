@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, PencilIcon } from "@/components/icons";
 
 export function AreasModal({ open, onClose, onChanged }) {
   const [areas, setAreas] = useState([]);
@@ -12,6 +12,10 @@ export function AreasModal({ open, onClose, onChanged }) {
   const [color, setColor] = useState("#9CA3AF");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editError, setEditError] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -24,6 +28,7 @@ export function AreasModal({ open, onClose, onChanged }) {
   useEffect(() => {
     if (!open) return;
     (async () => {
+      setEditingId(null);
       await load();
     })();
   }, [open]);
@@ -54,6 +59,29 @@ export function AreasModal({ open, onClose, onChanged }) {
     onChanged?.();
   }
 
+  function startEdit(area) {
+    setEditingId(area.id);
+    setEditName(area.name);
+    setEditError(null);
+  }
+
+  async function saveEditName(e) {
+    e?.preventDefault();
+    if (!editName.trim()) return;
+    const supabase = createClient();
+    const { error: updateError } = await supabase
+      .from("areas")
+      .update({ name: editName.trim() })
+      .eq("id", editingId);
+    if (updateError) {
+      setEditError(updateError.message.includes("duplicate") ? "Ya existe un área con ese nombre." : "No se pudo guardar.");
+      return;
+    }
+    setEditingId(null);
+    await load();
+    onChanged?.();
+  }
+
   async function handleDelete(area) {
     if (!window.confirm(`¿Eliminar "${area.name}" del catálogo?`)) return;
     const supabase = createClient();
@@ -73,25 +101,61 @@ export function AreasModal({ open, onClose, onChanged }) {
           <p className="text-sm text-muted-foreground">Cargando...</p>
         ) : (
           <div className="flex flex-col gap-1.5">
-            {areas.map((a) => (
-              <div key={a.id} className="flex items-center gap-2.5 rounded-md border border-border p-2">
-                <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
-                <input
-                  type="color"
-                  value={a.color}
-                  onChange={(e) => handleColorChange(a, e.target.value)}
-                  className="h-6 w-6 shrink-0 cursor-pointer rounded border border-border p-0"
-                  title="Color de la etiqueta"
-                />
-                <button
-                  onClick={() => handleDelete(a)}
-                  className="shrink-0 text-muted-foreground transition hover:text-status-overdue"
-                  title="Eliminar área"
+            {areas.map((a) =>
+              editingId === a.id ? (
+                <form
+                  key={a.id}
+                  onSubmit={saveEditName}
+                  className="flex items-center gap-2 rounded-md border border-border bg-neutral-50 p-2"
                 >
-                  <TrashIcon />
-                </button>
-              </div>
-            ))}
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="min-w-0 flex-1 rounded border border-border bg-white px-2 py-1 text-sm outline-none focus:border-foreground"
+                  />
+                  <button
+                    type="submit"
+                    className="shrink-0 rounded-md bg-black px-2.5 py-1 text-xs font-medium text-white transition hover:bg-neutral-800"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(null)}
+                    className="shrink-0 rounded-md border border-border px-2.5 py-1 text-xs transition hover:bg-white"
+                  >
+                    Cancelar
+                  </button>
+                </form>
+              ) : (
+                <div key={a.id} className="flex items-center gap-2.5 rounded-md border border-border p-2">
+                  <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
+                  <input
+                    type="color"
+                    value={a.color}
+                    onChange={(e) => handleColorChange(a, e.target.value)}
+                    className="h-6 w-6 shrink-0 cursor-pointer rounded border border-border p-0"
+                    title="Color de la etiqueta"
+                  />
+                  <button
+                    onClick={() => startEdit(a)}
+                    className="shrink-0 text-muted-foreground transition hover:text-foreground"
+                    title="Renombrar"
+                  >
+                    <PencilIcon />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(a)}
+                    className="shrink-0 text-muted-foreground transition hover:text-status-overdue"
+                    title="Eliminar área"
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              )
+            )}
+            {editError && <p className="text-xs text-status-overdue">{editError}</p>}
           </div>
         )}
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, PencilIcon } from "@/components/icons";
 
 export function PaisesModal({ open, onClose, onChanged }) {
   const [paises, setPaises] = useState([]);
@@ -13,6 +13,11 @@ export function PaisesModal({ open, onClose, onChanged }) {
   const [color, setColor] = useState("#9CA3AF");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editCode, setEditCode] = useState("");
+  const [editError, setEditError] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -25,6 +30,7 @@ export function PaisesModal({ open, onClose, onChanged }) {
   useEffect(() => {
     if (!open) return;
     (async () => {
+      setEditingId(null);
       await load();
     })();
   }, [open]);
@@ -60,6 +66,33 @@ export function PaisesModal({ open, onClose, onChanged }) {
     onChanged?.();
   }
 
+  function startEdit(pais) {
+    setEditingId(pais.id);
+    setEditName(pais.name);
+    setEditCode(pais.code ?? "");
+    setEditError(null);
+  }
+
+  async function saveEdit(e) {
+    e?.preventDefault();
+    if (!editName.trim()) return;
+    const supabase = createClient();
+    const { error: updateError } = await supabase
+      .from("paises")
+      .update({
+        name: editName.trim(),
+        code: editCode.trim() ? editCode.trim().toUpperCase().slice(0, 2) : null,
+      })
+      .eq("id", editingId);
+    if (updateError) {
+      setEditError(updateError.message.includes("duplicate") ? "Ya existe un país con ese nombre." : "No se pudo guardar.");
+      return;
+    }
+    setEditingId(null);
+    await load();
+    onChanged?.();
+  }
+
   async function handleDelete(pais) {
     if (pais.id === "00000000-0000-0000-0000-000000000001") return; // General no se elimina
     if (!window.confirm(`¿Eliminar "${pais.name}" del catálogo?`)) return;
@@ -80,32 +113,75 @@ export function PaisesModal({ open, onClose, onChanged }) {
           <p className="text-sm text-muted-foreground">Cargando...</p>
         ) : (
           <div className="flex flex-col gap-1.5">
-            {paises.map((p) => (
-              <div key={p.id} className="flex items-center gap-2.5 rounded-md border border-border p-2">
-                {p.code && (
-                  <span className="w-8 shrink-0 text-xs font-semibold" style={{ color: p.color }}>
-                    {p.code}
-                  </span>
-                )}
-                <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
-                <input
-                  type="color"
-                  value={p.color}
-                  onChange={(e) => handleColorChange(p, e.target.value)}
-                  className="h-6 w-6 shrink-0 cursor-pointer rounded border border-border p-0"
-                  title="Color de la etiqueta"
-                />
-                {p.id !== "00000000-0000-0000-0000-000000000001" && (
+            {paises.map((p) =>
+              editingId === p.id ? (
+                <form
+                  key={p.id}
+                  onSubmit={saveEdit}
+                  className="flex items-center gap-2 rounded-md border border-border bg-neutral-50 p-2"
+                >
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="min-w-0 flex-1 rounded border border-border bg-white px-2 py-1 text-sm outline-none focus:border-foreground"
+                  />
+                  <input
+                    value={editCode}
+                    onChange={(e) => setEditCode(e.target.value)}
+                    placeholder="ISO"
+                    maxLength={2}
+                    className="w-12 shrink-0 rounded border border-border bg-white px-2 py-1 text-sm uppercase outline-none focus:border-foreground"
+                  />
                   <button
-                    onClick={() => handleDelete(p)}
-                    className="shrink-0 text-muted-foreground transition hover:text-status-overdue"
-                    title="Eliminar país"
+                    type="submit"
+                    className="shrink-0 rounded-md bg-black px-2.5 py-1 text-xs font-medium text-white transition hover:bg-neutral-800"
                   >
-                    <TrashIcon />
+                    Guardar
                   </button>
-                )}
-              </div>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(null)}
+                    className="shrink-0 rounded-md border border-border px-2.5 py-1 text-xs transition hover:bg-white"
+                  >
+                    Cancelar
+                  </button>
+                </form>
+              ) : (
+                <div key={p.id} className="flex items-center gap-2.5 rounded-md border border-border p-2">
+                  {p.code && (
+                    <span className="w-8 shrink-0 text-xs font-semibold" style={{ color: p.color }}>
+                      {p.code}
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
+                  <input
+                    type="color"
+                    value={p.color}
+                    onChange={(e) => handleColorChange(p, e.target.value)}
+                    className="h-6 w-6 shrink-0 cursor-pointer rounded border border-border p-0"
+                    title="Color de la etiqueta"
+                  />
+                  <button
+                    onClick={() => startEdit(p)}
+                    className="shrink-0 text-muted-foreground transition hover:text-foreground"
+                    title="Editar"
+                  >
+                    <PencilIcon />
+                  </button>
+                  {p.id !== "00000000-0000-0000-0000-000000000001" && (
+                    <button
+                      onClick={() => handleDelete(p)}
+                      className="shrink-0 text-muted-foreground transition hover:text-status-overdue"
+                      title="Eliminar país"
+                    >
+                      <TrashIcon />
+                    </button>
+                  )}
+                </div>
+              )
+            )}
+            {editError && <p className="text-xs text-status-overdue">{editError}</p>}
           </div>
         )}
 
