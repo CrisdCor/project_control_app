@@ -395,6 +395,7 @@ export default function ReunionDetallePage() {
                 allowClear={false}
                 value={moderatorDraft}
                 onChange={setModeratorDraft}
+                fullWidth
                 options={profiles.map((p) => ({ value: p.id, label: p.name }))}
               />
             </div>
@@ -457,6 +458,7 @@ export default function ReunionDetallePage() {
                 allowClear={false}
                 value={paisDraft}
                 onChange={setPaisDraft}
+                fullWidth
                 options={paises.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
               />
             </div>
@@ -548,6 +550,7 @@ export default function ReunionDetallePage() {
                     placeholder="Responsable sugerido *"
                     value={suggestedValue}
                     onChange={setSuggestedValue}
+                    fullWidth
                     options={responsibleOptions}
                   />
                 </div>

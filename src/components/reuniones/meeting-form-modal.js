@@ -171,20 +171,9 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
           />
         </div>
 
-        <div className="flex gap-3">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <label className="text-sm font-medium">Fecha de la reunión</label>
-            <DatePicker value={meetingDate} onChange={setMeetingDate} />
-          </div>
-          <div className="flex w-32 flex-col gap-1.5">
-            <label className="text-sm font-medium">País</label>
-            <FilterDropdown
-              allowClear={false}
-              value={paisId}
-              onChange={setPaisId}
-              options={paises.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
-            />
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Fecha de la reunión</label>
+          <DatePicker value={meetingDate} onChange={setMeetingDate} />
         </div>
 
         <div className="flex gap-3">
@@ -199,12 +188,24 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
         </div>
 
         <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">País</label>
+          <FilterDropdown
+            allowClear={false}
+            value={paisId}
+            onChange={setPaisId}
+            fullWidth
+            options={paises.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Moderador</label>
           <FilterDropdown
             placeholder="Selecciona un moderador"
             allowClear={false}
             value={moderatorId}
             onChange={setModeratorId}
+            fullWidth
             options={profiles.map((p) => ({ value: p.id, label: p.name }))}
           />
         </div>

@@ -289,6 +289,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
                 allowClear={false}
                 value={editPaisId}
                 onChange={setEditPaisId}
+                fullWidth
                 options={Object.values(paisesById).map((p) => ({
                   value: p.id,
                   label: p.code ? `${p.code} · ${p.name}` : p.name,

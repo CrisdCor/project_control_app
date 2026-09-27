@@ -465,6 +465,7 @@ export function BitacoraDetailPanel({
                       allowClear={false}
                       value={encargadoId}
                       onChange={setEncargadoId}
+                      fullWidth
                       options={selectableProfiles.map((p) => ({ value: p.id, label: p.name }))}
                     />
                     {!canEditDueDateEncargado && (
@@ -478,6 +479,7 @@ export function BitacoraDetailPanel({
                       placeholder="Sin área"
                       value={areaId}
                       onChange={setAreaId}
+                      fullWidth
                       options={areas.map((a) => ({ value: a.id, label: a.name }))}
                       disabled={!isAdmin}
                     />
@@ -501,6 +503,7 @@ export function BitacoraDetailPanel({
                       allowClear={false}
                       value={paisId}
                       onChange={setPaisId}
+                      fullWidth
                       options={paises.map((p) => ({
                         value: p.id,
                         label: p.code ? `${p.code} · ${p.name}` : p.name,

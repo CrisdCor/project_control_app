@@ -23,23 +23,28 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
 
   useEffect(() => {
     if (!open) return;
+    // el modal se queda montado entre aperturas (para animar el cierre), así que
+    // los campos deben releerse del usuario cada vez que se abre — si no, al
+    // editar a alguien distinto se seguían viendo los datos de la edición anterior
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setName(user?.name ?? "");
+    setEmail(user?.email ?? "");
+    setAreaId(user?.area_id ?? "");
+    setCargo(user?.cargo ?? "");
+    setRole(user?.role ?? "gestor");
+    setPassword("");
+    setPhotoFile(null);
+    setError(null);
+
     const supabase = createClient();
     supabase
       .from("areas")
       .select("*")
       .order("name")
       .then(({ data }) => setAreas(data ?? []));
-  }, [open]);
+  }, [open, user]);
 
   function resetAndClose() {
-    setName("");
-    setEmail("");
-    setAreaId("");
-    setCargo("");
-    setRole("gestor");
-    setPassword("");
-    setPhotoFile(null);
-    setError(null);
     onClose();
   }
 
@@ -94,24 +99,24 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
           />
         </div>
 
-        <div className="flex gap-3">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <label className="text-sm font-medium">Área</label>
-            <FilterDropdown
-              placeholder="Sin área"
-              value={areaId}
-              onChange={setAreaId}
-              options={areas.map((a) => ({ value: a.id, label: a.name }))}
-            />
-          </div>
-          <div className="flex flex-1 flex-col gap-1.5">
-            <label className="text-sm font-medium">Cargo</label>
-            <input
-              value={cargo}
-              onChange={(e) => setCargo(e.target.value)}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Área</label>
+          <FilterDropdown
+            placeholder="Sin área"
+            value={areaId}
+            onChange={setAreaId}
+            fullWidth
+            options={areas.map((a) => ({ value: a.id, label: a.name }))}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Cargo</label>
+          <input
+            value={cargo}
+            onChange={(e) => setCargo(e.target.value)}
+            className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
+          />
         </div>
 
         <div className="flex flex-col gap-1.5">
