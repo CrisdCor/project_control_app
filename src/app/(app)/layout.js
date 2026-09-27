@@ -15,7 +15,7 @@ export default async function AppLayout({ children }) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, name, email, area, cargo, role, photo_url")
+    .select("id, name, email, area_id, cargo, role, photo_url")
     .eq("id", user.id)
     .maybeSingle();
 
