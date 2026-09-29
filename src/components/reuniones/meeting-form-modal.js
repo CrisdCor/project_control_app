@@ -20,8 +20,6 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
   const [endTime, setEndTime] = useState("");
   const [moderatorId, setModeratorId] = useState(currentUserId ?? "");
   const [participantIds, setParticipantIds] = useState([]);
-  const [externalName, setExternalName] = useState("");
-  const [externalParticipants, setExternalParticipants] = useState([]);
   const [previousMeetingId, setPreviousMeetingId] = useState("");
   const [paisId, setPaisId] = useState(GENERAL_PAIS_ID);
   const [paises, setPaises] = useState([]);
@@ -48,24 +46,11 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
     setEndTime("");
     setModeratorId(currentUserId ?? "");
     setParticipantIds([]);
-    setExternalName("");
-    setExternalParticipants([]);
     setPreviousMeetingId("");
     setPaisId(GENERAL_PAIS_ID);
     setChecklistDraft("");
     setChecklistItems([]);
     setError(null);
-  }
-
-  function addExternal() {
-    const name = externalName.trim();
-    if (!name || externalParticipants.includes(name)) return;
-    setExternalParticipants((prev) => [...prev, name]);
-    setExternalName("");
-  }
-
-  function removeExternal(name) {
-    setExternalParticipants((prev) => prev.filter((n) => n !== name));
   }
 
   function addChecklistItem() {
@@ -113,7 +98,6 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
         start_time: startTime || null,
         end_time: endTime || null,
         moderator_id: moderatorId,
-        external_participants: externalParticipants,
         previous_meeting_id: previousMeetingId || null,
         pais_id: paisId,
         created_by: currentUserId,
@@ -211,58 +195,13 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Participantes de la aplicación</label>
+          <label className="text-sm font-medium">Participantes</label>
           <MultiSelectDropdown
             options={profiles.map((p) => ({ id: p.id, name: p.name }))}
             selectedIds={participantIds}
             onChange={setParticipantIds}
             placeholder="Selecciona participantes..."
           />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Participantes externos (opcional)</label>
-          <div className="flex gap-2">
-            <input
-              value={externalName}
-              onChange={(e) => setExternalName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addExternal();
-                }
-              }}
-              placeholder="Nombre de la persona..."
-              className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
-            <button
-              type="button"
-              onClick={addExternal}
-              className="flex items-center gap-1 rounded-md border border-border px-3 py-2 text-xs font-medium transition hover:bg-neutral-50"
-            >
-              <PlusIcon />
-              Agregar
-            </button>
-          </div>
-          {externalParticipants.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {externalParticipants.map((name) => (
-                <span
-                  key={name}
-                  className="flex items-center gap-1.5 rounded-full border border-border bg-neutral-50 px-2.5 py-1 text-xs"
-                >
-                  {name}
-                  <button
-                    type="button"
-                    onClick={() => removeExternal(name)}
-                    className="text-muted-foreground hover:text-status-overdue"
-                  >
-                    ✕
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
         {pastMeetings?.length > 0 && (

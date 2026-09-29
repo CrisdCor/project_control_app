@@ -13,7 +13,6 @@ import { CountryCodeTag } from "@/components/ui/country-tag";
 import { TrashIcon, PencilIcon, ArchiveIcon, PlusIcon } from "@/components/icons";
 import { localTodayISO as todayISO } from "@/lib/dates";
 
-const EXTERNAL_PREFIX = "ext:";
 const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
 
 function formatTime(t) {
@@ -49,8 +48,6 @@ export default function ReunionDetallePage() {
   const [dateDraft, setDateDraft] = useState("");
   const [startTimeDraft, setStartTimeDraft] = useState("");
   const [endTimeDraft, setEndTimeDraft] = useState("");
-  const [externalDraft, setExternalDraft] = useState([]);
-  const [externalNameDraft, setExternalNameDraft] = useState("");
   const [savingDetail, setSavingDetail] = useState(false);
 
   // nuevo compromiso
@@ -152,16 +149,9 @@ export default function ReunionDetallePage() {
   const moderator = participants.find((p) => p.id === meeting.moderator_id);
   const otherParticipants = participants.filter((p) => p.id !== meeting.moderator_id);
 
-  const responsibleOptions = [
-    ...profiles.map((p) => ({ value: p.id, label: p.name })),
-    ...(meeting.external_participants ?? []).map((name) => ({
-      value: `${EXTERNAL_PREFIX}${name}`,
-      label: `${name} (externo)`,
-    })),
-  ];
+  const responsibleOptions = profiles.map((p) => ({ value: p.id, label: p.name }));
 
   function responsibleLabel(item) {
-    if (item.suggested_responsible_external) return `${item.suggested_responsible_external} (externo)`;
     if (item.suggested_responsible) return profiles.find((p) => p.id === item.suggested_responsible)?.name ?? "—";
     return "—";
   }
@@ -174,20 +164,7 @@ export default function ReunionDetallePage() {
     setDateDraft(meeting.meeting_date);
     setStartTimeDraft(meeting.start_time ?? "");
     setEndTimeDraft(meeting.end_time ?? "");
-    setExternalDraft(meeting.external_participants ?? []);
-    setExternalNameDraft("");
     setEditingDetail(true);
-  }
-
-  function addExternalDraft() {
-    const name = externalNameDraft.trim();
-    if (!name || externalDraft.includes(name)) return;
-    setExternalDraft((prev) => [...prev, name]);
-    setExternalNameDraft("");
-  }
-
-  function removeExternalDraft(name) {
-    setExternalDraft((prev) => prev.filter((n) => n !== name));
   }
 
   async function handleSaveDetail() {
@@ -204,7 +181,6 @@ export default function ReunionDetallePage() {
         meeting_date: dateDraft,
         start_time: startTimeDraft || null,
         end_time: endTimeDraft || null,
-        external_participants: externalDraft,
       })
       .eq("id", id);
 
@@ -253,13 +229,11 @@ export default function ReunionDetallePage() {
     }
 
     setAdding(true);
-    const isExternal = suggestedValue.startsWith(EXTERNAL_PREFIX);
     const supabase = createClient();
     await supabase.from("meeting_action_items").insert({
       meeting_id: id,
       description: description.trim(),
-      suggested_responsible: !isExternal ? suggestedValue : null,
-      suggested_responsible_external: isExternal ? suggestedValue.slice(EXTERNAL_PREFIX.length) : null,
+      suggested_responsible: suggestedValue,
       suggested_due_date: suggestedDueDate,
       created_by: currentUserId,
     });
@@ -409,50 +383,6 @@ export default function ReunionDetallePage() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Participantes externos</label>
-              <div className="flex gap-2">
-                <input
-                  value={externalNameDraft}
-                  onChange={(e) => setExternalNameDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addExternalDraft();
-                    }
-                  }}
-                  placeholder="Nombre de la persona..."
-                  className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-                />
-                <button
-                  type="button"
-                  onClick={addExternalDraft}
-                  className="flex items-center gap-1 rounded-md border border-border px-3 py-2 text-xs font-medium transition hover:bg-neutral-50"
-                >
-                  <PlusIcon />
-                  Agregar
-                </button>
-              </div>
-              {externalDraft.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {externalDraft.map((name) => (
-                    <span
-                      key={name}
-                      className="flex items-center gap-1.5 rounded-full border border-border bg-neutral-50 px-2.5 py-1 text-xs"
-                    >
-                      {name}
-                      <button
-                        type="button"
-                        onClick={() => removeExternalDraft(name)}
-                        className="text-muted-foreground hover:text-status-overdue"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">País</label>
               <FilterDropdown
                 allowClear={false}
@@ -513,11 +443,10 @@ export default function ReunionDetallePage() {
                   Moderador: <span className="font-medium text-foreground">{moderator.name}</span>
                 </>
               )}
-              {(otherParticipants.length > 0 || meeting.external_participants?.length > 0) && (
+              {otherParticipants.length > 0 && (
                 <>
                   {moderator && " · "}
-                  Participantes:{" "}
-                  {[...otherParticipants.map((p) => p.name), ...(meeting.external_participants ?? []).map((n) => `${n} (externo)`)].join(", ")}
+                  Participantes: {otherParticipants.map((p) => p.name).join(", ")}
                 </>
               )}
             </p>
