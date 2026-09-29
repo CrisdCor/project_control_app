@@ -160,51 +160,53 @@ export function FloatingNav({ profile, navStyle, onToggleNavStyle }) {
     >
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
         {/* selector de secciones — círculos del mismo tamaño del botón principal;
-            se ocultan mientras una sección específica está expandida */}
-        {!activeSection &&
-          SECTIONS.map((section) => {
-            const SectionIcon = section.icon;
-            const y = collapsedY(section.dir, section.step);
-            return (
-              <button
-                key={section.id}
-                onClick={() => selectSection(section.id)}
-                style={{
-                  width: SIZE,
-                  height: SIZE,
-                  transform: `translateY(${open ? y : 0}px) scale(${open ? 1 : 0.4})`,
-                  transitionDelay: open ? `${(section.step - 1) * 60}ms` : "0ms",
-                }}
-                title={section.label}
-                className={`absolute left-0 top-0 flex items-center justify-center rounded-full bg-white text-foreground shadow-md ring-1 ring-border transition-all duration-[600ms] ease-out ${
-                  open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-                }`}
-              >
-                <SectionIcon className="h-4 w-4" />
-              </button>
-            );
-          })}
+            se quedan visibles aunque una esté activa, para poder cambiar directo */}
+        {SECTIONS.map((section) => {
+          const SectionIcon = section.icon;
+          const y = collapsedY(section.dir, section.step);
+          const isActive = activeSection === section.id;
+          return (
+            <button
+              key={section.id}
+              onClick={() => selectSection(section.id)}
+              style={{
+                width: SIZE,
+                height: SIZE,
+                transform: `translateY(${open ? y : 0}px) scale(${open ? 1 : 0.4})`,
+                transitionDelay: open ? `${(section.step - 1) * 60}ms` : "0ms",
+              }}
+              title={section.label}
+              className={`absolute left-0 top-0 flex items-center justify-center rounded-full shadow-md ring-1 transition-all duration-[600ms] ease-out ${
+                isActive ? "bg-black text-white ring-black" : "bg-white text-foreground ring-border"
+              } ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
+            >
+              <SectionIcon className="h-4 w-4" />
+            </button>
+          );
+        })}
 
-        {/* sección activa: crece en el mismo lugar hacia arriba o abajo, formando
-            una píldora que contiene su ícono y sus páginas apiladas */}
+        {/* sección activa: despliega su píldora hacia la derecha, alineada con
+            el botón de esa sección */}
         {active &&
           (() => {
             const visibleItems = active.items.filter((item) => !item.adminOnly || isAdmin);
             const pillHeight = SIZE + visibleItems.length * ROW_HEIGHT;
-            const baseY = collapsedY(active.dir, active.step);
-            const top = active.dir === "up" ? baseY + SIZE - pillHeight : baseY;
+            const top = collapsedY(active.dir, active.step);
             const rows = [
               { key: "icon", icon: active.icon, isIconRow: true },
               ...visibleItems.map((item) => ({ key: item.href ?? item.label, ...item })),
             ];
-            const ordered = active.dir === "up" ? [...rows].reverse() : rows;
 
             return (
               <div
-                style={{ width: PILL_WIDTH, height: pillHeight, transform: `translateY(${top}px)` }}
+                style={{
+                  width: PILL_WIDTH,
+                  height: pillHeight,
+                  transform: `translateY(${top}px) translateX(${SIZE + GAP}px)`,
+                }}
                 className="absolute left-0 top-0 flex flex-col overflow-hidden rounded-[20px] bg-white shadow-lg ring-1 ring-border transition-all duration-300 ease-out"
               >
-                {ordered.map((row) => {
+                {rows.map((row) => {
                   if (row.isIconRow) {
                     const Icon = row.icon;
                     return (
