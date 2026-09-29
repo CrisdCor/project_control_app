@@ -16,6 +16,7 @@ import {
   CalendarIcon,
   UserCircleIcon,
   LogoutIcon,
+  SidebarIcon,
 } from "@/components/icons";
 
 const SECTIONS = [
@@ -33,21 +34,22 @@ const SECTIONS = [
     items: [
       { href: "/bitacoras", label: "Bitácoras", icon: FolderIcon },
       { href: "/reuniones", label: "Reuniones", icon: CalendarIcon },
+      { href: "/cuaderno", label: "Cuaderno", icon: NotebookIcon },
       { href: "/usuarios", label: "Usuarios", icon: UsersIcon, adminOnly: true },
     ],
   },
   {
-    id: "personal",
-    label: "Personal",
+    id: "configuracion",
+    label: "Configuración",
     items: [
-      { href: "/cuaderno", label: "Cuaderno", icon: NotebookIcon },
       { href: "/perfil", label: "Mi perfil", icon: UserCircleIcon },
+      { toggle: true, label: "Barra lateral", icon: SidebarIcon },
       { action: "logout", label: "Cerrar sesión", icon: LogoutIcon },
     ],
   },
 ];
 
-export function Sidebar({ profile }) {
+export function Sidebar({ profile, navStyle, onToggleNavStyle }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -94,6 +96,18 @@ export function Sidebar({ profile }) {
                   onClick={handleLogout}
                   title={item.label}
                   className="rounded-md p-2 text-status-overdue transition hover:bg-red-50"
+                >
+                  <Icon className="shrink-0" />
+                </button>
+              );
+            }
+            if (item.toggle) {
+              return (
+                <button
+                  key="toggle"
+                  onClick={onToggleNavStyle}
+                  title={navStyle === "sidebar" ? "Cambiar a menú flotante" : "Cambiar a barra lateral"}
+                  className="rounded-md p-2 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
                 >
                   <Icon className="shrink-0" />
                 </button>
@@ -157,6 +171,23 @@ export function Sidebar({ profile }) {
                         >
                           <Icon className="shrink-0" />
                           {item.label}
+                        </button>
+                      );
+                    }
+                    if (item.toggle) {
+                      return (
+                        <button
+                          key="toggle"
+                          onClick={onToggleNavStyle}
+                          className="flex items-center justify-between rounded-md px-2.5 py-2 text-left text-sm text-foreground transition hover:bg-neutral-100"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Icon className="shrink-0" />
+                            {item.label}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {navStyle === "sidebar" ? "Activa" : "Inactiva"}
+                          </span>
                         </button>
                       );
                     }

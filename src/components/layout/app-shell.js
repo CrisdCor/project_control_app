@@ -25,9 +25,9 @@ export function AppShell({ profile, children }) {
   if (navStyle === "sidebar") {
     return (
       <div className="flex h-screen flex-col">
-        <Header profile={profile} navStyle={navStyle} onToggleNavStyle={toggleNavStyle} />
+        <Header profile={profile} />
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar profile={profile} />
+          <Sidebar profile={profile} navStyle={navStyle} onToggleNavStyle={toggleNavStyle} />
           <main className="flex-1 overflow-y-auto">
             <div className="content-max h-full px-5 py-4">{children}</div>
           </main>
@@ -38,11 +38,11 @@ export function AppShell({ profile, children }) {
 
   return (
     <div className="flex h-screen flex-col">
-      <Header profile={profile} navStyle={navStyle} onToggleNavStyle={toggleNavStyle} />
+      <Header profile={profile} />
       <main className="flex-1 overflow-y-auto">
         <div className="content-max h-full px-5 py-4">{children}</div>
       </main>
-      <FloatingNav profile={profile} />
+      <FloatingNav profile={profile} navStyle={navStyle} onToggleNavStyle={toggleNavStyle} />
     </div>
   );
 }

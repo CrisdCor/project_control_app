@@ -13,11 +13,12 @@ import {
   CalendarIcon,
   UserCircleIcon,
   LogoutIcon,
+  SidebarIcon,
 } from "@/components/icons";
 
-// dir: hacia dónde se despliega desde el botón principal ("up" | "down")
-// step: cuántos "saltos" de distancia desde el centro (1, 2, 3...)
-const SECTIONS = [
+// dir: hacia dónde crece la sección desde el botón principal ("up" | "down")
+// step: cuántos "saltos" de distancia desde el centro, cuando está colapsada (círculo)
+const BASE_SECTIONS = [
   {
     id: "principal",
     label: "Principal",
@@ -38,29 +39,31 @@ const SECTIONS = [
     items: [
       { href: "/bitacoras", label: "Bitácoras", icon: FolderIcon },
       { href: "/reuniones", label: "Reuniones", icon: CalendarIcon },
+      { href: "/cuaderno", label: "Cuaderno", icon: NotebookIcon },
       { href: "/usuarios", label: "Usuarios", icon: UsersIcon, adminOnly: true },
     ],
   },
   {
-    id: "personal",
-    label: "Personal",
-    icon: NotebookIcon,
+    id: "configuracion",
+    label: "Configuración",
+    icon: UserCircleIcon,
     dir: "up",
     step: 1,
     items: [
-      { href: "/cuaderno", label: "Cuaderno", icon: NotebookIcon },
       { href: "/perfil", label: "Mi perfil", icon: UserCircleIcon },
+      { toggle: true, icon: SidebarIcon },
       { action: "logout", label: "Cerrar sesión", icon: LogoutIcon },
     ],
   },
 ];
 
-const SIZE = 40; // mismo tamaño para el botón principal, las secciones y las pastillas
+const SIZE = 40; // diámetro del botón principal y de cada sección colapsada
+const PILL_WIDTH = 108; // ancho de la píldora expandida, para que quepa el texto
 const GAP = 10;
 const STEP_DISTANCE = SIZE + GAP;
+const ROW_HEIGHT = 34; // alto de cada fila dentro de la píldora expandida
 
-function sectionYOffset(dir, step, open) {
-  if (!open) return 0;
+function collapsedY(dir, step) {
   const distance = step * STEP_DISTANCE;
   return dir === "up" ? -distance : distance;
 }
@@ -89,7 +92,7 @@ function MenuGlyph({ open }) {
   );
 }
 
-export function FloatingNav({ profile }) {
+export function FloatingNav({ profile, navStyle, onToggleNavStyle }) {
   const pathname = usePathname();
   const router = useRouter();
   const containerRef = useRef(null);
@@ -98,6 +101,7 @@ export function FloatingNav({ profile }) {
   const [hovering, setHovering] = useState(false);
 
   const isAdmin = profile?.role === "admin";
+  const SECTIONS = BASE_SECTIONS;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -127,16 +131,10 @@ export function FloatingNav({ profile }) {
   }, []);
 
   function toggleMain() {
-    if (open) {
-      setOpen(false);
-      setActiveSection(null);
-    } else {
-      setOpen(true);
-    }
+    setOpen((prev) => !prev);
+    setActiveSection(null);
   }
 
-  // clic en una sección: si ya estaba abierta esa, se cierra; si era otra,
-  // cambia directo a la nueva sin necesidad de cerrar todo el menú primero
   function selectSection(id) {
     setActiveSection((prev) => (prev === id ? null : id));
   }
@@ -149,6 +147,7 @@ export function FloatingNav({ profile }) {
   }
 
   const idle = !open && !hovering;
+  const active = SECTIONS.find((s) => s.id === activeSection);
 
   return (
     <div
@@ -160,86 +159,115 @@ export function FloatingNav({ profile }) {
       }`}
     >
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
-        {/* fondo con blur, detrás de botones y pastillas, para separarlos del contenido de la página */}
-        {open && (
-          <div
-            aria-hidden
-            className="absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 animate-fade-in rounded-[28px] bg-white/30 backdrop-blur-md"
-            style={{ width: 320, height: 260 }}
-          />
-        )}
+        {/* selector de secciones — círculos del mismo tamaño del botón principal;
+            se ocultan mientras una sección específica está expandida */}
+        {!activeSection &&
+          SECTIONS.map((section) => {
+            const SectionIcon = section.icon;
+            const y = collapsedY(section.dir, section.step);
+            return (
+              <button
+                key={section.id}
+                onClick={() => selectSection(section.id)}
+                style={{
+                  width: SIZE,
+                  height: SIZE,
+                  transform: `translateY(${open ? y : 0}px) scale(${open ? 1 : 0.4})`,
+                  transitionDelay: open ? `${(section.step - 1) * 60}ms` : "0ms",
+                }}
+                title={section.label}
+                className={`absolute left-0 top-0 flex items-center justify-center rounded-full bg-white text-foreground shadow-md ring-1 ring-border transition-all duration-[600ms] ease-out ${
+                  open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+                }`}
+              >
+                <SectionIcon className="h-4 w-4" />
+              </button>
+            );
+          })}
 
-        {/* secciones — mismo tamaño del botón, se apilan hacia arriba/abajo */}
-        {SECTIONS.map((section) => {
-          const SectionIcon = section.icon;
-          const isActive = activeSection === section.id;
-          const y = sectionYOffset(section.dir, section.step, open);
-          return (
-            <button
-              key={section.id}
-              onClick={() => selectSection(section.id)}
-              style={{
-                width: SIZE,
-                height: SIZE,
-                transform: `translateY(${y}px) scale(${open ? 1 : 0.4})`,
-                transitionDelay: open ? `${(section.step - 1) * 60}ms` : "0ms",
-              }}
-              title={section.label}
-              className={`absolute left-0 top-0 flex items-center justify-center rounded-full shadow-md ring-1 backdrop-blur-sm transition-all duration-[600ms] ease-out ${
-                isActive ? "bg-black text-white ring-black" : "bg-white/90 text-foreground ring-border"
-              } ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
-            >
-              <SectionIcon className="h-4 w-4" />
-            </button>
-          );
-        })}
+        {/* sección activa: crece en el mismo lugar hacia arriba o abajo, formando
+            una píldora que contiene su ícono y sus páginas apiladas */}
+        {active &&
+          (() => {
+            const visibleItems = active.items.filter((item) => !item.adminOnly || isAdmin);
+            const pillHeight = SIZE + visibleItems.length * ROW_HEIGHT;
+            const baseY = collapsedY(active.dir, active.step);
+            const top = active.dir === "up" ? baseY + SIZE - pillHeight : baseY;
+            const rows = [
+              { key: "icon", icon: active.icon, isIconRow: true },
+              ...visibleItems.map((item) => ({ key: item.href ?? item.label, ...item })),
+            ];
+            const ordered = active.dir === "up" ? [...rows].reverse() : rows;
 
-        {/* pastillas — horizontales, mismo alto y centradas con su sección, como si
-            salieran de ese botón */}
-        {SECTIONS.map((section) => {
-          if (activeSection !== section.id) return null;
-          const y = sectionYOffset(section.dir, section.step, true);
-          return (
-            <div
-              key={section.id}
-              style={{ transform: `translateY(${y}px) translateX(${SIZE + 10}px)` }}
-              className="absolute left-0 top-0 flex items-center gap-1.5"
-            >
-              {section.items
-                .filter((item) => !item.adminOnly || isAdmin)
-                .map((item) => {
-                  const Icon = item.icon;
-                  if (item.action === "logout") {
+            return (
+              <div
+                style={{ width: PILL_WIDTH, height: pillHeight, transform: `translateY(${top}px)` }}
+                className="absolute left-0 top-0 flex flex-col overflow-hidden rounded-[20px] bg-white shadow-lg ring-1 ring-border transition-all duration-300 ease-out"
+              >
+                {ordered.map((row) => {
+                  if (row.isIconRow) {
+                    const Icon = row.icon;
                     return (
                       <button
-                        key="logout"
-                        onClick={handleLogout}
+                        key="icon"
+                        onClick={() => setActiveSection(null)}
+                        title="Cerrar"
                         style={{ height: SIZE }}
-                        className="flex animate-fade-in items-center gap-1.5 whitespace-nowrap rounded-full bg-white/90 px-3.5 text-xs text-status-overdue shadow-md ring-1 ring-border backdrop-blur-sm transition hover:bg-red-50"
+                        className="flex shrink-0 items-center justify-center bg-black text-white transition hover:bg-neutral-800"
                       >
-                        <Icon className="h-3.5 w-3.5 shrink-0" />
-                        {item.label}
+                        <Icon className="h-4 w-4" />
                       </button>
                     );
                   }
-                  const active = pathname.startsWith(item.href);
+
+                  const Icon = row.icon;
+
+                  if (row.action === "logout") {
+                    return (
+                      <button
+                        key={row.key}
+                        onClick={handleLogout}
+                        style={{ height: ROW_HEIGHT }}
+                        className="flex shrink-0 items-center gap-1.5 px-3 text-xs text-status-overdue transition hover:bg-red-50"
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        {row.label}
+                      </button>
+                    );
+                  }
+
+                  if (row.toggle) {
+                    return (
+                      <button
+                        key="toggle"
+                        onClick={onToggleNavStyle}
+                        style={{ height: ROW_HEIGHT }}
+                        className="flex shrink-0 items-center gap-1.5 px-3 text-left text-xs text-muted-foreground transition hover:bg-neutral-50"
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        {navStyle === "sidebar" ? "Menú flotante" : "Barra lateral"}
+                      </button>
+                    );
+                  }
+
+                  const isCurrentPage = pathname.startsWith(row.href);
                   return (
                     <Link
-                      key={item.href}
-                      href={item.href}
-                      style={{ height: SIZE }}
-                      className={`flex animate-fade-in items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-xs shadow-md ring-1 ring-border backdrop-blur-sm transition ${
-                        active ? "bg-black text-white" : "bg-white/90 text-foreground hover:bg-neutral-50"
+                      key={row.key}
+                      href={row.href}
+                      style={{ height: ROW_HEIGHT }}
+                      className={`flex shrink-0 items-center gap-1.5 px-3 text-xs transition ${
+                        isCurrentPage ? "bg-neutral-100 text-foreground" : "text-muted-foreground hover:bg-neutral-50"
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0" />
-                      {item.label}
+                      <span className="truncate">{row.label}</span>
                     </Link>
                   );
                 })}
-            </div>
-          );
-        })}
+              </div>
+            );
+          })()}
 
         {/* botón principal — sticker fijo, nunca cambia de posición */}
         <button
