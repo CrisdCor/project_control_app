@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -13,6 +14,8 @@ import {
   UsersIcon,
   NotebookIcon,
   CalendarIcon,
+  UserCircleIcon,
+  LogoutIcon,
 } from "@/components/icons";
 
 const SECTIONS = [
@@ -36,12 +39,25 @@ const SECTIONS = [
   {
     id: "personal",
     label: "Personal",
-    items: [{ href: "/cuaderno", label: "Cuaderno", icon: NotebookIcon }],
+    items: [
+      { href: "/cuaderno", label: "Cuaderno", icon: NotebookIcon },
+      { href: "/perfil", label: "Mi perfil", icon: UserCircleIcon },
+      { action: "logout", label: "Cerrar sesión", icon: LogoutIcon },
+    ],
   },
 ];
 
 export function Sidebar({ profile }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
   const [openSections, setOpenSections] = useState(() =>
     Object.fromEntries(SECTIONS.map((s) => [s.id, s.id === "principal"]))
   );
@@ -70,8 +86,20 @@ export function Sidebar({ profile }) {
       <aside className="flex w-11 shrink-0 flex-col items-center border-r border-border bg-surface py-3">
         <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto">
           {flatNavItems.map((item) => {
-            const active = pathname.startsWith(item.href);
             const Icon = item.icon;
+            if (item.action === "logout") {
+              return (
+                <button
+                  key="logout"
+                  onClick={handleLogout}
+                  title={item.label}
+                  className="rounded-md p-2 text-status-overdue transition hover:bg-red-50"
+                >
+                  <Icon className="shrink-0" />
+                </button>
+              );
+            }
+            const active = pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
@@ -119,8 +147,20 @@ export function Sidebar({ profile }) {
                 {section.items
                   .filter((item) => !item.adminOnly || isAdmin)
                   .map((item) => {
-                    const active = pathname.startsWith(item.href);
                     const Icon = item.icon;
+                    if (item.action === "logout") {
+                      return (
+                        <button
+                          key="logout"
+                          onClick={handleLogout}
+                          className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm text-status-overdue transition hover:bg-red-50"
+                        >
+                          <Icon className="shrink-0" />
+                          {item.label}
+                        </button>
+                      );
+                    }
+                    const active = pathname.startsWith(item.href);
                     return (
                       <Link
                         key={item.href}

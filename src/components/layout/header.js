@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { ChevronDownIcon } from "@/components/icons";
+import { usePathname } from "next/navigation";
+import { Switch } from "@/components/ui/switch";
+import { SidebarIcon } from "@/components/icons";
 
 const TITLES = [
   { match: "/overview", label: "Resumen" },
@@ -24,27 +22,9 @@ function resolveTitle(pathname) {
 
 export function Header({ profile, navStyle, onToggleNavStyle }) {
   const pathname = usePathname();
-  const router = useRouter();
   const title = resolveTitle(pathname);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
 
   const isAdmin = profile?.role === "admin";
-
-  useEffect(() => {
-    function onClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
-
-  async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
 
   return (
     <header className="relative flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
@@ -54,11 +34,20 @@ export function Header({ profile, navStyle, onToggleNavStyle }) {
         {title}
       </span>
 
-      <div ref={menuRef} className="relative">
-        <button
-          onClick={() => setMenuOpen((v) => !v)}
-          className="flex items-center gap-2 rounded-md p-1 pr-1.5 transition hover:bg-neutral-50"
-        >
+      <div className="flex items-center gap-4">
+        {onToggleNavStyle && (
+          <div className="flex items-center gap-2 text-muted-foreground" title="Estilo de navegación">
+            <SidebarIcon />
+            <Switch
+              checked={navStyle === "sidebar"}
+              onChange={onToggleNavStyle}
+              title={navStyle === "sidebar" ? "Cambiar a menú flotante" : "Cambiar a barra lateral"}
+            />
+          </div>
+        )}
+
+        {/* Solo informativo — el menú de perfil y cierre de sesión viven en la navegación */}
+        <div className="flex items-center gap-2 p-1">
           <div className="min-w-0 text-right leading-tight">
             <p className="truncate text-sm font-medium">{profile?.name ?? "Usuario"}</p>
             <p className="truncate text-xs text-muted-foreground">
@@ -74,37 +63,7 @@ export function Header({ profile, navStyle, onToggleNavStyle }) {
               </span>
             )}
           </div>
-          <ChevronDownIcon className="shrink-0 text-muted-foreground" />
-        </button>
-
-        {menuOpen && (
-          <div className="absolute right-0 top-full z-20 mt-1.5 w-48 animate-fade-in rounded-md border border-border bg-white py-1 shadow-md">
-            <Link
-              href="/perfil"
-              onClick={() => setMenuOpen(false)}
-              className="block px-3 py-2 text-sm transition hover:bg-neutral-50"
-            >
-              Mi perfil
-            </Link>
-            {onToggleNavStyle && (
-              <button
-                onClick={() => {
-                  onToggleNavStyle();
-                  setMenuOpen(false);
-                }}
-                className="block w-full px-3 py-2 text-left text-sm transition hover:bg-neutral-50"
-              >
-                {navStyle === "sidebar" ? "Cambiar a menú flotante" : "Cambiar a barra lateral"}
-              </button>
-            )}
-            <button
-              onClick={handleLogout}
-              className="block w-full px-3 py-2 text-left text-sm text-status-overdue transition hover:bg-neutral-50"
-            >
-              Cerrar sesión
-            </button>
-          </div>
-        )}
+        </div>
       </div>
     </header>
   );
