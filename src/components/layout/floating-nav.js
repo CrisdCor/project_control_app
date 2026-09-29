@@ -5,12 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HomeIcon, FolderIcon, CheckSquareIcon, UsersIcon, NotebookIcon, CalendarIcon } from "@/components/icons";
 
+// dir: hacia dónde se despliega desde el botón principal ("up" | "down")
+// step: cuántos "saltos" de distancia desde el centro (1, 2, 3...)
 const SECTIONS = [
   {
     id: "principal",
     label: "Principal",
     icon: HomeIcon,
-    angle: 90, // recto hacia arriba
+    dir: "up",
+    step: 1,
     items: [
       { href: "/overview", label: "Resumen", icon: HomeIcon },
       { href: "/mi-trabajo", label: "Mi trabajo", icon: CheckSquareIcon },
@@ -20,7 +23,8 @@ const SECTIONS = [
     id: "gestion",
     label: "Gestión",
     icon: FolderIcon,
-    angle: 45, // diagonal
+    dir: "down",
+    step: 1,
     items: [
       { href: "/bitacoras", label: "Bitácoras", icon: FolderIcon },
       { href: "/reuniones", label: "Reuniones", icon: CalendarIcon },
@@ -31,19 +35,45 @@ const SECTIONS = [
     id: "personal",
     label: "Personal",
     icon: NotebookIcon,
-    angle: 0, // horizontal
+    dir: "up",
+    step: 2,
     items: [{ href: "/cuaderno", label: "Cuaderno", icon: NotebookIcon }],
   },
 ];
 
-const RADIUS = 58;
+const SIZE = 40; // mismo tamaño para el botón principal y las secciones
+const GAP = 10;
+const STEP_DISTANCE = SIZE + GAP;
 
-function fanTransform(angleDeg, isOpen) {
-  if (!isOpen) return "translate(0px, 0px) scale(0.4)";
-  const rad = (angleDeg * Math.PI) / 180;
-  const x = Math.round(Math.cos(rad) * RADIUS);
-  const y = Math.round(-Math.sin(rad) * RADIUS);
-  return `translate(${x}px, ${y}px) scale(1)`;
+function stackTransform(dir, step, open) {
+  if (!open) return "translateY(0px) scale(0.4)";
+  const distance = step * STEP_DISTANCE;
+  const y = dir === "up" ? -distance : distance;
+  return `translateY(${y}px) scale(1)`;
+}
+
+// ícono de menú fuera de lo común: tres barras de distinto largo (no el
+// hamburger típico parejo), que igual se anima hacia una X al abrir
+function MenuGlyph({ open }) {
+  return (
+    <span className="relative flex h-4 w-4 flex-col items-center justify-center gap-[3px]">
+      <span
+        className={`h-0.5 rounded-full bg-white transition-all duration-300 ease-in-out ${
+          open ? "w-4 translate-y-[5px] rotate-45" : "w-2.5 translate-y-0 rotate-0 self-start"
+        }`}
+      />
+      <span
+        className={`h-0.5 w-4 rounded-full bg-white transition-all duration-300 ease-in-out ${
+          open ? "scale-x-0 opacity-0" : "scale-x-100 opacity-100"
+        }`}
+      />
+      <span
+        className={`h-0.5 rounded-full bg-white transition-all duration-300 ease-in-out ${
+          open ? "w-4 -translate-y-[5px] -rotate-45" : "w-3.5 translate-y-0 rotate-0 self-end"
+        }`}
+      />
+    </span>
+  );
 }
 
 export function FloatingNav({ profile }) {
@@ -51,10 +81,10 @@ export function FloatingNav({ profile }) {
   const containerRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
+  const [hovering, setHovering] = useState(false);
 
   const isAdmin = profile?.role === "admin";
 
-  // cerrar todo al navegar
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(false);
@@ -91,88 +121,87 @@ export function FloatingNav({ profile }) {
     }
   }
 
+  // clic en una sección: si ya estaba abierta esa, se cierra; si era otra,
+  // cambia directo a la nueva sin necesidad de cerrar todo el menú primero
   function selectSection(id) {
     setActiveSection((prev) => (prev === id ? null : id));
   }
 
-  const activeSectionData = SECTIONS.find((s) => s.id === activeSection);
-  const delayFor = (angle) => (angle === 90 ? 0 : angle === 45 ? 60 : 120);
+  const idle = !open && !hovering;
 
   return (
-    <div ref={containerRef} className="fixed bottom-6 left-6 z-40">
-      <div className="relative h-12 w-12">
-        {/* secciones en abanico */}
-        {!activeSection &&
-          SECTIONS.map((section) => {
-            const SectionIcon = section.icon;
-            return (
-              <button
-                key={section.id}
-                onClick={() => selectSection(section.id)}
-                style={{
-                  transform: fanTransform(section.angle, open),
-                  transitionDelay: open ? `${delayFor(section.angle)}ms` : "0ms",
-                }}
-                title={section.label}
-                className={`absolute inset-0 flex h-9 w-9 items-center justify-center rounded-lg bg-white text-foreground shadow-md ring-1 ring-border transition-all duration-[600ms] ease-out ${
-                  open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-                }`}
-              >
-                <SectionIcon className="h-3.5 w-3.5" />
-              </button>
-            );
-          })}
+    <div
+      ref={containerRef}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      className={`fixed left-6 top-1/2 z-40 -translate-y-1/2 transition-opacity duration-300 ${
+        idle ? "opacity-60" : "opacity-100"
+      }`}
+    >
+      <div className="relative" style={{ width: SIZE, height: SIZE }}>
+        {/* secciones — mismo tamaño del botón, se apilan hacia arriba/abajo */}
+        {SECTIONS.map((section) => {
+          const SectionIcon = section.icon;
+          const isActive = activeSection === section.id;
+          return (
+            <button
+              key={section.id}
+              onClick={() => selectSection(section.id)}
+              style={{
+                width: SIZE,
+                height: SIZE,
+                transform: stackTransform(section.dir, section.step, open),
+                transitionDelay: open ? `${(section.step - 1) * 60}ms` : "0ms",
+              }}
+              title={section.label}
+              className={`absolute left-0 top-0 flex items-center justify-center rounded-full shadow-md ring-1 transition-all duration-[600ms] ease-out ${
+                isActive ? "bg-black text-white ring-black" : "bg-white text-foreground ring-border"
+              } ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
+            >
+              <SectionIcon className="h-4 w-4" />
+            </button>
+          );
+        })}
 
-        {/* páginas de la sección elegida, apiladas hacia arriba */}
-        {activeSectionData && (
-          <div className="absolute bottom-full left-0 mb-3 flex flex-col gap-2">
-            <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {activeSectionData.label}
-            </p>
-            {activeSectionData.items
-              .filter((item) => !item.adminOnly || isAdmin)
-              .map((item) => {
-                const Icon = item.icon;
-                const active = pathname.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex animate-fade-in items-center gap-1.5 whitespace-nowrap rounded-lg py-1.5 pl-2 pr-3 text-xs shadow-md ring-1 ring-border transition ${
-                      active ? "bg-black text-white" : "bg-white text-foreground hover:bg-neutral-50"
-                    }`}
-                  >
-                    <Icon className="h-3.5 w-3.5 shrink-0" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-          </div>
-        )}
+        {/* listas de páginas — se abren hacia la derecha, a la altura de su sección */}
+        {SECTIONS.map((section) => {
+          if (activeSection !== section.id) return null;
+          return (
+            <div
+              key={section.id}
+              style={{ transform: stackTransform(section.dir, section.step, true) }}
+              className="absolute left-0 top-0 ml-[52px] flex flex-col gap-1.5"
+            >
+              {section.items
+                .filter((item) => !item.adminOnly || isAdmin)
+                .map((item) => {
+                  const Icon = item.icon;
+                  const active = pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex animate-fade-in items-center gap-1.5 whitespace-nowrap rounded-full py-1.5 pl-2 pr-3 text-xs shadow-md ring-1 ring-border transition ${
+                        active ? "bg-black text-white" : "bg-white text-foreground hover:bg-neutral-50"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+            </div>
+          );
+        })}
 
         {/* botón principal — sticker fijo, nunca cambia de posición */}
         <button
           onClick={toggleMain}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          className="relative z-10 flex h-12 w-12 items-center justify-center rounded-lg bg-black text-white shadow-lg transition hover:bg-neutral-800"
+          style={{ width: SIZE, height: SIZE }}
+          className="relative z-10 flex items-center justify-center rounded-full bg-black text-white shadow-lg transition hover:bg-neutral-800"
         >
-          <span className="relative flex h-4 w-5 items-center justify-center">
-            <span
-              className={`absolute h-0.5 w-5 rounded-full bg-white transition-all duration-[350ms] ease-in-out ${
-                open ? "translate-y-0 rotate-45" : "-translate-y-[6px] rotate-0"
-              }`}
-            />
-            <span
-              className={`absolute h-0.5 w-5 rounded-full bg-white transition-all duration-[350ms] ease-in-out ${
-                open ? "scale-x-0 opacity-0" : "scale-x-100 opacity-100"
-              }`}
-            />
-            <span
-              className={`absolute h-0.5 w-5 rounded-full bg-white transition-all duration-[350ms] ease-in-out ${
-                open ? "translate-y-0 -rotate-45" : "translate-y-[6px] rotate-0"
-              }`}
-            />
-          </span>
+          <MenuGlyph open={open} />
         </button>
       </div>
     </div>
