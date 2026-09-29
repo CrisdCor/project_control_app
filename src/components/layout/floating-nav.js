@@ -13,7 +13,7 @@ const SECTIONS = [
     label: "Principal",
     icon: HomeIcon,
     dir: "up",
-    step: 1,
+    step: 2,
     items: [
       { href: "/overview", label: "Resumen", icon: HomeIcon },
       { href: "/mi-trabajo", label: "Mi trabajo", icon: CheckSquareIcon },
@@ -36,7 +36,7 @@ const SECTIONS = [
     label: "Personal",
     icon: NotebookIcon,
     dir: "up",
-    step: 2,
+    step: 1,
     items: [{ href: "/cuaderno", label: "Cuaderno", icon: NotebookIcon }],
   },
 ];
