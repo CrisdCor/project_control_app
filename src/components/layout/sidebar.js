@@ -4,52 +4,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { NAV_SECTIONS } from "@/components/layout/nav-sections";
+import { Switch } from "@/components/ui/switch";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
   ChevronLeftIcon,
-  HomeIcon,
-  FolderIcon,
-  CheckSquareIcon,
-  UsersIcon,
-  NotebookIcon,
-  CalendarIcon,
-  UserCircleIcon,
   LogoutIcon,
   SidebarIcon,
+  SunIcon,
+  MoonIcon,
 } from "@/components/icons";
 
-const SECTIONS = [
-  {
-    id: "principal",
-    label: "Principal",
-    items: [
-      { href: "/overview", label: "Resumen", icon: HomeIcon },
-      { href: "/mi-trabajo", label: "Mi trabajo", icon: CheckSquareIcon },
-    ],
-  },
-  {
-    id: "gestion",
-    label: "Gestión",
-    items: [
-      { href: "/bitacoras", label: "Bitácoras", icon: FolderIcon },
-      { href: "/reuniones", label: "Reuniones", icon: CalendarIcon },
-      { href: "/cuaderno", label: "Cuaderno", icon: NotebookIcon },
-      { href: "/usuarios", label: "Usuarios", icon: UsersIcon, adminOnly: true },
-    ],
-  },
-  {
-    id: "configuracion",
-    label: "Configuración",
-    items: [
-      { href: "/perfil", label: "Mi perfil", icon: UserCircleIcon },
-      { toggle: true, label: "Barra lateral", icon: SidebarIcon },
-      { action: "logout", label: "Cerrar sesión", icon: LogoutIcon },
-    ],
-  },
-];
-
-export function Sidebar({ profile, navStyle, onToggleNavStyle }) {
+export function Sidebar({ profile, sidebarOn, onToggleSidebar, theme, onToggleTheme }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -61,7 +28,7 @@ export function Sidebar({ profile, navStyle, onToggleNavStyle }) {
   }
 
   const [openSections, setOpenSections] = useState(() =>
-    Object.fromEntries(SECTIONS.map((s) => [s.id, s.id === "principal"]))
+    Object.fromEntries(NAV_SECTIONS.map((s) => [s.id, s.id === "principal"]))
   );
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -81,7 +48,7 @@ export function Sidebar({ profile, navStyle, onToggleNavStyle }) {
   }
 
   const isAdmin = profile?.role === "admin";
-  const flatNavItems = SECTIONS.flatMap((s) => s.items).filter((item) => !item.adminOnly || isAdmin);
+  const flatNavItems = NAV_SECTIONS.flatMap((s) => s.items).filter((item) => !item.adminOnly || isAdmin);
 
   if (collapsed) {
     return (
@@ -89,30 +56,6 @@ export function Sidebar({ profile, navStyle, onToggleNavStyle }) {
         <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto">
           {flatNavItems.map((item) => {
             const Icon = item.icon;
-            if (item.action === "logout") {
-              return (
-                <button
-                  key="logout"
-                  onClick={handleLogout}
-                  title={item.label}
-                  className="rounded-md p-2 text-status-overdue transition hover:bg-red-50"
-                >
-                  <Icon className="shrink-0" />
-                </button>
-              );
-            }
-            if (item.toggle) {
-              return (
-                <button
-                  key="toggle"
-                  onClick={onToggleNavStyle}
-                  title={navStyle === "sidebar" ? "Cambiar a menú flotante" : "Cambiar a barra lateral"}
-                  className="rounded-md p-2 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
-                >
-                  <Icon className="shrink-0" />
-                </button>
-              );
-            }
             const active = pathname.startsWith(item.href);
             return (
               <Link
@@ -130,8 +73,15 @@ export function Sidebar({ profile, navStyle, onToggleNavStyle }) {
         </nav>
 
         <button
+          onClick={handleLogout}
+          title="Cerrar sesión"
+          className="mb-1 rounded-md p-2 text-status-overdue transition hover:bg-red-50"
+        >
+          <LogoutIcon className="shrink-0" />
+        </button>
+        <button
           onClick={toggleCollapsed}
-          className="mt-2 rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
+          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-neutral-100 hover:text-foreground"
           title="Mostrar menú"
         >
           <ChevronRightIcon />
@@ -143,7 +93,7 @@ export function Sidebar({ profile, navStyle, onToggleNavStyle }) {
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-surface">
       <nav className="flex-1 overflow-y-auto p-3">
-        {SECTIONS.map((section) => (
+        {NAV_SECTIONS.map((section) => (
           <div key={section.id} className="mb-2">
             <button
               onClick={() => toggleSection(section.id)}
@@ -162,35 +112,6 @@ export function Sidebar({ profile, navStyle, onToggleNavStyle }) {
                   .filter((item) => !item.adminOnly || isAdmin)
                   .map((item) => {
                     const Icon = item.icon;
-                    if (item.action === "logout") {
-                      return (
-                        <button
-                          key="logout"
-                          onClick={handleLogout}
-                          className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm text-status-overdue transition hover:bg-red-50"
-                        >
-                          <Icon className="shrink-0" />
-                          {item.label}
-                        </button>
-                      );
-                    }
-                    if (item.toggle) {
-                      return (
-                        <button
-                          key="toggle"
-                          onClick={onToggleNavStyle}
-                          className="flex items-center justify-between rounded-md px-2.5 py-2 text-left text-sm text-foreground transition hover:bg-neutral-100"
-                        >
-                          <span className="flex items-center gap-2.5">
-                            <Icon className="shrink-0" />
-                            {item.label}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {navStyle === "sidebar" ? "Activa" : "Inactiva"}
-                          </span>
-                        </button>
-                      );
-                    }
                     const active = pathname.startsWith(item.href);
                     return (
                       <Link
@@ -205,6 +126,34 @@ export function Sidebar({ profile, navStyle, onToggleNavStyle }) {
                       </Link>
                     );
                   })}
+
+                {section.id === "configuracion" && (
+                  <>
+                    <div className="my-1.5 border-t border-border" />
+                    <div className="flex items-center justify-between rounded-md px-2.5 py-2 text-sm text-foreground">
+                      <span className="flex items-center gap-2.5">
+                        <SidebarIcon className="shrink-0" />
+                        Barra lateral
+                      </span>
+                      <Switch checked={sidebarOn} onChange={onToggleSidebar} label="Barra lateral" />
+                    </div>
+                    <div className="flex items-center justify-between rounded-md px-2.5 py-2 text-sm text-foreground">
+                      <span className="flex items-center gap-2.5">
+                        {theme === "dark" ? <MoonIcon className="shrink-0" /> : <SunIcon className="shrink-0" />}
+                        Tema
+                      </span>
+                      <Switch checked={theme === "dark"} onChange={onToggleTheme} label="Tema oscuro" />
+                    </div>
+                    <div className="my-1.5 border-t border-border" />
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm text-status-overdue transition hover:bg-red-50"
+                    >
+                      <LogoutIcon className="shrink-0" />
+                      Cerrar sesión
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

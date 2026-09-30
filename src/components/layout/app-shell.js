@@ -3,46 +3,62 @@
 import { useEffect, useState } from "react";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
-import { FloatingNav } from "@/components/layout/floating-nav";
 
 export function AppShell({ profile, children }) {
-  const [navStyle, setNavStyle] = useState("floating");
+  const [sidebarOn, setSidebarOn] = useState(false);
+  const [theme, setTheme] = useState("light");
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("nav-style");
+    const storedSidebar = window.localStorage.getItem("sidebar-on");
+    const storedTheme = window.localStorage.getItem("theme");
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored === "sidebar" || stored === "floating") setNavStyle(stored);
+    if (storedSidebar === "1") setSidebarOn(true);
+    if (storedTheme === "dark") setTheme("dark");
   }, []);
 
-  function toggleNavStyle() {
-    setNavStyle((prev) => {
-      const next = prev === "floating" ? "sidebar" : "floating";
-      window.localStorage.setItem("nav-style", next);
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
+
+  function toggleSidebar() {
+    setSidebarOn((prev) => {
+      const next = !prev;
+      window.localStorage.setItem("sidebar-on", next ? "1" : "0");
       return next;
     });
   }
 
-  if (navStyle === "sidebar") {
-    return (
-      <div className="flex h-screen flex-col">
-        <Header profile={profile} />
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar profile={profile} navStyle={navStyle} onToggleNavStyle={toggleNavStyle} />
-          <main className="flex-1 overflow-y-auto">
-            <div className="content-max h-full px-5 py-4">{children}</div>
-          </main>
-        </div>
-      </div>
-    );
+  function toggleTheme() {
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      window.localStorage.setItem("theme", next);
+      return next;
+    });
   }
 
   return (
     <div className="flex h-screen flex-col">
-      <Header profile={profile} />
-      <main className="flex-1 overflow-y-auto">
-        <div className="content-max h-full px-5 py-4">{children}</div>
-      </main>
-      <FloatingNav profile={profile} navStyle={navStyle} onToggleNavStyle={toggleNavStyle} />
+      <Header
+        profile={profile}
+        sidebarOn={sidebarOn}
+        onToggleSidebar={toggleSidebar}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+      <div className="flex flex-1 overflow-hidden">
+        {sidebarOn && (
+          <Sidebar
+            profile={profile}
+            sidebarOn={sidebarOn}
+            onToggleSidebar={toggleSidebar}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        )}
+        <main className="flex-1 overflow-y-auto">
+          <div className="content-max h-full px-5 py-4">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

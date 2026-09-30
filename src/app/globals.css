@@ -118,6 +118,43 @@
   }
 }
 
+/* Tema oscuro: redefine los mismos tokens semánticos (fondo, superficie, borde,
+   texto), así que cualquier clase que ya los use (bg-surface, text-foreground,
+   border-border, etc.) se adapta sola. Además, como buena parte de la app usa
+   bg-white / bg-neutral-* directamente en vez del token, se cubren también esas
+   clases específicas para que el tema oscuro alcance a toda la aplicación sin
+   tener que reescribir cada componente. */
+.dark {
+  --color-background: #0d0d0f;
+  --color-surface: #18181b;
+  --color-border: #2e2e33;
+  --color-foreground: #f2f2f2;
+  --color-muted: #a1a1aa;
+  --color-muted-foreground: #9a9aa0;
+}
+
+.dark .bg-white {
+  background-color: var(--color-surface);
+}
+.dark .bg-neutral-50 {
+  background-color: #202024;
+}
+.dark .bg-neutral-100 {
+  background-color: #27272b;
+}
+.dark .bg-neutral-200 {
+  background-color: #303036;
+}
+.dark .text-neutral-500 {
+  color: #a1a1aa;
+}
+.dark .text-neutral-300 {
+  color: #71717a;
+}
+.dark .bg-red-50 {
+  background-color: #2a1616;
+}
+
 body {
   background: var(--color-background);
   color: var(--color-foreground);
