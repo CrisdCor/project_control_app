@@ -16,8 +16,8 @@ import {
   SidebarIcon,
 } from "@/components/icons";
 
-// dir: hacia dónde crece la sección desde el botón principal ("up" | "down")
-// step: cuántos "saltos" de distancia desde el centro, cuando está colapsada (círculo)
+// dir: en qué posición vertical descansa la sección colapsada respecto al botón
+// principal ("up" | "down"); step: cuántos "saltos" de distancia
 const BASE_SECTIONS = [
   {
     id: "principal",
@@ -51,17 +51,16 @@ const BASE_SECTIONS = [
     step: 1,
     items: [
       { href: "/perfil", label: "Mi perfil", icon: UserCircleIcon },
-      { toggle: true, icon: SidebarIcon },
+      { toggle: true, label: "Barra lateral", icon: SidebarIcon },
       { action: "logout", label: "Cerrar sesión", icon: LogoutIcon },
     ],
   },
 ];
 
 const SIZE = 40; // diámetro del botón principal y de cada sección colapsada
-const PILL_WIDTH = 108; // ancho de la píldora expandida, para que quepa el texto
+const ITEM_WIDTH = 106; // ancho de cada celda de navegación dentro de la cápsula
 const GAP = 10;
 const STEP_DISTANCE = SIZE + GAP;
-const ROW_HEIGHT = 34; // alto de cada fila dentro de la píldora expandida
 
 function collapsedY(dir, step) {
   const distance = step * STEP_DISTANCE;
@@ -147,7 +146,6 @@ export function FloatingNav({ profile, navStyle, onToggleNavStyle }) {
   }
 
   const idle = !open && !hovering;
-  const active = SECTIONS.find((s) => s.id === activeSection);
 
   return (
     <div
@@ -159,92 +157,64 @@ export function FloatingNav({ profile, navStyle, onToggleNavStyle }) {
       }`}
     >
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
-        {/* selector de secciones — círculos del mismo tamaño del botón principal;
-            se quedan visibles aunque una esté activa, para poder cambiar directo */}
         {SECTIONS.map((section) => {
           const SectionIcon = section.icon;
-          const y = collapsedY(section.dir, section.step);
           const isActive = activeSection === section.id;
+          const y = collapsedY(section.dir, section.step);
+          const visibleItems = section.items.filter((item) => !item.adminOnly || isAdmin);
+          const width = isActive ? SIZE + visibleItems.length * ITEM_WIDTH : SIZE;
+
           return (
-            <button
+            <div
               key={section.id}
-              onClick={() => selectSection(section.id)}
               style={{
-                width: SIZE,
                 height: SIZE,
+                width,
                 transform: `translateY(${open ? y : 0}px) scale(${open ? 1 : 0.4})`,
                 transitionDelay: open ? `${(section.step - 1) * 60}ms` : "0ms",
               }}
-              title={section.label}
-              className={`absolute left-0 top-0 flex items-center justify-center rounded-full shadow-md ring-1 transition-all duration-[600ms] ease-out ${
-                isActive ? "bg-black text-white ring-black" : "bg-white text-foreground ring-border"
-              } ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
+              className={`absolute left-0 top-0 flex items-stretch overflow-hidden rounded-full shadow-md ring-1 ring-border transition-all duration-[450ms] ease-out ${
+                open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+              }`}
             >
-              <SectionIcon className="h-4 w-4" />
-            </button>
-          );
-        })}
-
-        {/* sección activa: despliega su píldora hacia la derecha, alineada con
-            el botón de esa sección */}
-        {active &&
-          (() => {
-            const visibleItems = active.items.filter((item) => !item.adminOnly || isAdmin);
-            const pillHeight = SIZE + visibleItems.length * ROW_HEIGHT;
-            const top = collapsedY(active.dir, active.step);
-            const rows = [
-              { key: "icon", icon: active.icon, isIconRow: true },
-              ...visibleItems.map((item) => ({ key: item.href ?? item.label, ...item })),
-            ];
-
-            return (
-              <div
-                style={{
-                  width: PILL_WIDTH,
-                  height: pillHeight,
-                  transform: `translateY(${top}px) translateX(${SIZE + GAP}px)`,
-                }}
-                className="absolute left-0 top-0 flex flex-col overflow-hidden rounded-[20px] bg-white shadow-lg ring-1 ring-border transition-all duration-300 ease-out"
+              {/* celda del ícono — representa y cierra la sección seleccionada */}
+              <button
+                onClick={() => selectSection(section.id)}
+                title={section.label}
+                style={{ width: SIZE, height: SIZE }}
+                className={`flex shrink-0 items-center justify-center transition-colors ${
+                  isActive ? "bg-black text-white" : "bg-white text-foreground hover:bg-neutral-100"
+                }`}
               >
-                {rows.map((row) => {
-                  if (row.isIconRow) {
-                    const Icon = row.icon;
+                <SectionIcon className="h-4 w-4" />
+              </button>
+
+              {/* celdas de navegación — se despliegan horizontalmente dentro de la misma cápsula */}
+              {isActive &&
+                visibleItems.map((item) => {
+                  const Icon = item.icon;
+
+                  if (item.action === "logout") {
                     return (
                       <button
-                        key="icon"
-                        onClick={() => setActiveSection(null)}
-                        title="Cerrar"
-                        style={{ height: SIZE }}
-                        className="flex shrink-0 items-center justify-center bg-black text-white transition hover:bg-neutral-800"
-                      >
-                        <Icon className="h-4 w-4" />
-                      </button>
-                    );
-                  }
-
-                  const Icon = row.icon;
-
-                  if (row.action === "logout") {
-                    return (
-                      <button
-                        key={row.key}
+                        key="logout"
                         onClick={handleLogout}
-                        style={{ height: ROW_HEIGHT }}
-                        className="flex shrink-0 items-center gap-1.5 px-3 text-xs text-status-overdue transition hover:bg-red-50"
+                        style={{ width: ITEM_WIDTH }}
+                        className="flex shrink-0 items-center gap-1.5 whitespace-nowrap bg-white px-3 text-xs text-status-overdue transition-colors hover:bg-neutral-100"
                       >
                         <Icon className="h-3.5 w-3.5 shrink-0" />
-                        {row.label}
+                        {item.label}
                       </button>
                     );
                   }
 
-                  if (row.toggle) {
+                  if (item.toggle) {
                     return (
                       <button
                         key="toggle"
                         onClick={onToggleNavStyle}
-                        style={{ height: ROW_HEIGHT }}
-                        className="flex shrink-0 items-center gap-1.5 px-3 text-left text-xs text-muted-foreground transition hover:bg-neutral-50"
+                        style={{ width: ITEM_WIDTH }}
+                        className="flex shrink-0 items-center gap-1.5 whitespace-nowrap bg-white px-3 text-xs text-foreground transition-colors hover:bg-neutral-100"
                       >
                         <Icon className="h-3.5 w-3.5 shrink-0" />
                         {navStyle === "sidebar" ? "Menú flotante" : "Barra lateral"}
@@ -252,24 +222,24 @@ export function FloatingNav({ profile, navStyle, onToggleNavStyle }) {
                     );
                   }
 
-                  const isCurrentPage = pathname.startsWith(row.href);
+                  const isCurrentPage = pathname.startsWith(item.href);
                   return (
                     <Link
-                      key={row.key}
-                      href={row.href}
-                      style={{ height: ROW_HEIGHT }}
-                      className={`flex shrink-0 items-center gap-1.5 px-3 text-xs transition ${
-                        isCurrentPage ? "bg-neutral-100 text-foreground" : "text-muted-foreground hover:bg-neutral-50"
+                      key={item.href}
+                      href={item.href}
+                      style={{ width: ITEM_WIDTH }}
+                      className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 text-xs transition-colors ${
+                        isCurrentPage ? "bg-black text-white" : "bg-white text-foreground hover:bg-neutral-100"
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{row.label}</span>
+                      {item.label}
                     </Link>
                   );
                 })}
-              </div>
-            );
-          })()}
+            </div>
+          );
+        })}
 
         {/* botón principal — sticker fijo, nunca cambia de posición */}
         <button
