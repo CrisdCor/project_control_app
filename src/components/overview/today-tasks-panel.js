@@ -4,14 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DueDot } from "@/components/status/status-badge";
 import { dueSemaphore, agendaSemaphore } from "@/lib/status";
-import { DatePicker } from "@/components/ui/date-picker";
 import { BitacoraDrawer } from "@/components/bitacoras/bitacora-drawer";
 import { fetchMyBitacoraIds } from "@/lib/bitacoras";
 import { CountryCodeTag } from "@/components/ui/country-tag";
-import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { localTodayISO as todayISO } from "@/lib/dates";
 import { Pagination } from "@/components/ui/pagination";
-import { usePaises, paisOptions } from "@/lib/paises";
+import { usePaises } from "@/lib/paises";
+import { AgendaTaskModal } from "@/components/overview/agenda-task-modal";
 
 const PAGE_SIZE = 6;
 
@@ -268,48 +267,20 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
         }}
       />
 
-      {editingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 animate-fade-in">
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-xs animate-fade-in rounded-[var(--radius-card)] border border-border bg-white p-5 shadow-lg"
-          >
-            <h3 className="mb-3 text-sm font-semibold">Editar tarea</h3>
-            <form onSubmit={saveEditAgenda} className="flex flex-col gap-3">
-              <input
-                autoFocus
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-foreground"
-              />
-              <DatePicker value={editDate} onChange={setEditDate} />
-              <FilterDropdown
-                allowClear={false}
-                value={editPaisId}
-                onChange={setEditPaisId}
-                fullWidth
-                options={paisOptions(paises)}
-              />
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={savingEdit || !editText.trim()}
-                  className="flex-1 rounded-md bg-black py-1.5 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
-                >
-                  Guardar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingItem(null)}
-                  className="flex-1 rounded-md border border-border py-1.5 text-xs transition hover:bg-neutral-50"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AgendaTaskModal
+        open={Boolean(editingItem)}
+        title="Editar tarea"
+        text={editText}
+        onTextChange={setEditText}
+        date={editDate}
+        onDateChange={setEditDate}
+        paisId={editPaisId}
+        onPaisIdChange={setEditPaisId}
+        paises={paises}
+        onSubmit={saveEditAgenda}
+        onCancel={() => setEditingItem(null)}
+        saving={savingEdit}
+      />
     </section>
   );
 }
