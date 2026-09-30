@@ -10,6 +10,8 @@ import { BITACORA_STATUS, bitacoraStatusKey } from "@/lib/status";
 import { CheckSquareIcon } from "@/components/icons";
 import { CountryTag } from "@/components/ui/country-tag";
 import { AreaTag } from "@/components/ui/area-tag";
+import { usePaises, paisOptions } from "@/lib/paises";
+import { useAreas, areaOptions } from "@/lib/areas";
 
 function formatDate(d) {
   if (!d) return "";
@@ -33,8 +35,8 @@ export function BitacoraDetailPanel({
   const [isLider, setIsLider] = useState(false);
   const [myAreaId, setMyAreaId] = useState(null);
   const [profiles, setProfiles] = useState([]);
-  const [paises, setPaises] = useState([]);
-  const [areas, setAreas] = useState([]);
+  const { paises } = usePaises();
+  const { areas } = useAreas();
   const [bitacora, setBitacora] = useState(null);
   const [activities, setActivities] = useState([]);
   const [checklistCounts, setChecklistCounts] = useState({});
@@ -104,12 +106,6 @@ export function BitacoraDetailPanel({
 
     const { data: allProfiles } = await supabase.from("profiles").select("id, name, role, area_id").order("name");
     setProfiles(allProfiles ?? []);
-
-    const { data: allPaises } = await supabase.from("paises").select("*").order("name");
-    setPaises(allPaises ?? []);
-
-    const { data: allAreas } = await supabase.from("areas").select("*").order("name");
-    setAreas(allAreas ?? []);
 
     if (!isCreate) {
       const { data: b } = await supabase.from("v_bitacora_status").select("*").eq("id", bitacoraId).maybeSingle();
@@ -480,7 +476,7 @@ export function BitacoraDetailPanel({
                       value={areaId}
                       onChange={setAreaId}
                       fullWidth
-                      options={areas.map((a) => ({ value: a.id, label: a.name }))}
+                      options={areaOptions(areas)}
                       disabled={!isAdmin}
                     />
                     {!isAdmin && (
@@ -504,10 +500,7 @@ export function BitacoraDetailPanel({
                       value={paisId}
                       onChange={setPaisId}
                       fullWidth
-                      options={paises.map((p) => ({
-                        value: p.id,
-                        label: p.code ? `${p.code} · ${p.name}` : p.name,
-                      }))}
+                      options={paisOptions(paises)}
                       disabled={!canEditDueDateEncargado}
                     />
                   </div>

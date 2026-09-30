@@ -10,13 +10,15 @@ import { PaisesModal } from "@/components/bitacoras/paises-modal";
 import { CountryTag } from "@/components/ui/country-tag";
 import { AreaTag } from "@/components/ui/area-tag";
 import { PlusIcon, TrashIcon, AlertIcon } from "@/components/icons";
+import { usePaises } from "@/lib/paises";
+import { useAreas } from "@/lib/areas";
 
 export default function BitacorasPage() {
   const [isAdmin, setIsAdmin] = useState(null);
   const [isLider, setIsLider] = useState(false);
   const [bitacoras, setBitacoras] = useState([]);
-  const [paisesById, setPaisesById] = useState({});
-  const [areasById, setAreasById] = useState({});
+  const { paisesById, refetch: refetchPaises } = usePaises();
+  const { areasById } = useAreas();
   const [urgentIds, setUrgentIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [drawerId, setDrawerId] = useState(null);
@@ -39,13 +41,6 @@ export default function BitacorasPage() {
 
     const { data } = await supabase.from("v_bitacora_status").select("*");
     const rows = data ?? [];
-
-    const [{ data: paises }, { data: areas }] = await Promise.all([
-      supabase.from("paises").select("*"),
-      supabase.from("areas").select("*"),
-    ]);
-    setPaisesById(Object.fromEntries((paises ?? []).map((p) => [p.id, p])));
-    setAreasById(Object.fromEntries((areas ?? []).map((a) => [a.id, a])));
 
     const encargadoIds = [...new Set(rows.map((b) => b.encargado_id).filter(Boolean))];
     let nameMap = {};
@@ -195,7 +190,7 @@ export default function BitacorasPage() {
       />
       <BitacoraDrawer open={creating} onClose={() => setCreating(false)} bitacoraId={null} onSaved={load} fullAccess />
       {isAdmin && (
-        <PaisesModal open={paisesModalOpen} onClose={() => setPaisesModalOpen(false)} onChanged={load} />
+        <PaisesModal open={paisesModalOpen} onClose={() => setPaisesModalOpen(false)} onChanged={refetchPaises} />
       )}
     </div>
   );

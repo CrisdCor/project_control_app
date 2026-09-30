@@ -11,12 +11,13 @@ import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { AlertIcon } from "@/components/icons";
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { AreaTag } from "@/components/ui/area-tag";
+import { usePaises } from "@/lib/paises";
+import { useAreas, areaOptions } from "@/lib/areas";
 
 const PAGE_SIZE = 6;
 
 export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged }) {
   const [users, setUsers] = useState([]);
-  const [areas, setAreas] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(currentUserId);
   const [areaFilter, setAreaFilter] = useState("");
   const [bitacoras, setBitacoras] = useState([]);
@@ -24,25 +25,9 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [drawerId, setDrawerId] = useState(null);
-  const [paisesById, setPaisesById] = useState({});
-  const [areasById, setAreasById] = useState({});
+  const { paisesById } = usePaises();
+  const { areas, areasById } = useAreas();
   const hasLoadedOnce = useRef(false);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from("paises")
-      .select("*")
-      .then(({ data }) => setPaisesById(Object.fromEntries((data ?? []).map((p) => [p.id, p]))));
-    supabase
-      .from("areas")
-      .select("*")
-      .order("name")
-      .then(({ data }) => {
-        setAreas(data ?? []);
-        setAreasById(Object.fromEntries((data ?? []).map((a) => [a.id, a])));
-      });
-  }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -133,7 +118,7 @@ export function MyTasksPanel({ currentUserId, isAdmin, refreshSignal, onChanged 
                   setAreaFilter(v);
                   setPage(1);
                 }}
-                options={areas.map((a) => ({ value: a.id, label: a.name }))}
+                options={areaOptions(areas)}
               />
             )}
             {users.length > 0 && (

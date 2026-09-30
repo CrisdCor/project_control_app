@@ -10,16 +10,15 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { localTodayISO as todayISO } from "@/lib/dates";
+import { usePaises, paisOptions, GENERAL_PAIS_ID } from "@/lib/paises";
 
 const PAGE_SIZE = 6;
-const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
 
 export function AgendaPanel({ userId, refreshSignal, onChanged }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const hasLoadedOnce = useRef(false);
-  const [paises, setPaises] = useState([]);
-  const [paisesById, setPaisesById] = useState({});
+  const { paises, paisesById } = usePaises();
   const [page, setPage] = useState(1);
 
   // se reutiliza el mismo modal para crear y editar: editingItem.id === null
@@ -54,12 +53,6 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
 
     const { data } = await supabase.from("agenda_items").select("*").eq("user_id", userId);
     setItems(data ?? []);
-
-    if (!paises.length) {
-      const { data: paisesData } = await supabase.from("paises").select("*").order("name");
-      setPaises(paisesData ?? []);
-      setPaisesById(Object.fromEntries((paisesData ?? []).map((p) => [p.id, p])));
-    }
 
     setLoading(false);
     hasLoadedOnce.current = true;
@@ -276,10 +269,7 @@ export function AgendaPanel({ userId, refreshSignal, onChanged }) {
                 value={editPaisId}
                 onChange={setEditPaisId}
                 fullWidth
-                options={paises.map((p) => ({
-                  value: p.id,
-                  label: p.code ? `${p.code} · ${p.name}` : p.name,
-                }))}
+                options={paisOptions(paises)}
               />
               <div className="flex gap-2">
                 <button

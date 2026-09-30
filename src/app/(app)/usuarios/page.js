@@ -9,12 +9,13 @@ import { deleteUserAction } from "@/app/(app)/usuarios/actions";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { AreaTag } from "@/components/ui/area-tag";
 import { PlusIcon } from "@/components/icons";
+import { useAreas } from "@/lib/areas";
 
 export default function UsuariosPage() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(null); // null = cargando
   const [users, setUsers] = useState([]);
-  const [areasById, setAreasById] = useState({});
+  const { areasById, refetch: refetchAreas } = useAreas();
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -42,12 +43,8 @@ export default function UsuariosPage() {
       setIsAdmin(profile?.role === "admin");
     }
 
-    const [{ data }, { data: areasData }] = await Promise.all([
-      supabase.from("profiles").select("*").order("name"),
-      supabase.from("areas").select("*").order("name"),
-    ]);
+    const { data } = await supabase.from("profiles").select("*").order("name");
     setUsers(data ?? []);
-    setAreasById(Object.fromEntries((areasData ?? []).map((a) => [a.id, a])));
     setLoading(false);
   }
 
@@ -204,7 +201,7 @@ export default function UsuariosPage() {
         user={editingUser}
         onSaved={load}
       />
-      <AreasModal open={areasModalOpen} onClose={() => setAreasModalOpen(false)} onChanged={load} />
+      <AreasModal open={areasModalOpen} onClose={() => setAreasModalOpen(false)} onChanged={refetchAreas} />
     </div>
   );
 }

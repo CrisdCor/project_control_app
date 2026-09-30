@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { CalendarIcon } from "@/components/icons";
 import { localTodayISO as todayISO } from "@/lib/dates";
+import { usePaises } from "@/lib/paises";
 
 const PAGE_SIZE = 5;
 
@@ -17,7 +18,7 @@ function formatTime(t) {
 
 export function MeetingsTodayPanel({ userId, selectedDate, refreshSignal }) {
   const [meetings, setMeetings] = useState([]);
-  const [paisesById, setPaisesById] = useState({});
+  const { paisesById } = usePaises();
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
@@ -27,11 +28,10 @@ export function MeetingsTodayPanel({ userId, selectedDate, refreshSignal }) {
     const supabase = createClient();
     if (meetings.length === 0) setLoading(true);
 
-    const [{ data: participantRows }, { data: paisesData }] = await Promise.all([
-      supabase.from("meeting_participants").select("meeting_id").eq("user_id", userId),
-      supabase.from("paises").select("*"),
-    ]);
-    setPaisesById(Object.fromEntries((paisesData ?? []).map((p) => [p.id, p])));
+    const { data: participantRows } = await supabase
+      .from("meeting_participants")
+      .select("meeting_id")
+      .eq("user_id", userId);
 
     const meetingIds = [...new Set((participantRows ?? []).map((r) => r.meeting_id))];
     if (meetingIds.length === 0) {

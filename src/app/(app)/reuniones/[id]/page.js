@@ -12,8 +12,7 @@ import { MeetingChecklistDrawer } from "@/components/reuniones/meeting-checklist
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { TrashIcon, PencilIcon, ArchiveIcon, PlusIcon } from "@/components/icons";
 import { localTodayISO as todayISO } from "@/lib/dates";
-
-const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
+import { usePaises, paisOptions, GENERAL_PAIS_ID } from "@/lib/paises";
 
 function formatTime(t) {
   if (!t) return null;
@@ -29,7 +28,7 @@ export default function ReunionDetallePage() {
   const [meeting, setMeeting] = useState(null);
   const [participants, setParticipants] = useState([]); // [{id, name}]
   const [profiles, setProfiles] = useState([]);
-  const [paises, setPaises] = useState([]);
+  const { paises } = usePaises();
   const [items, setItems] = useState([]);
   const [checklistItems, setChecklistItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -89,19 +88,17 @@ export default function ReunionDetallePage() {
     } = await supabase.auth.getUser();
     setCurrentUserId(user?.id ?? null);
 
-    const [{ data: profile }, { data: m }, { data: parts }, { data: profs }, { data: paisesData }] = await Promise.all([
+    const [{ data: profile }, { data: m }, { data: parts }, { data: profs }] = await Promise.all([
       user ? supabase.from("profiles").select("role").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
       supabase.from("meetings").select("*").eq("id", id).maybeSingle(),
       supabase.from("meeting_participants").select("user_id, profiles(name)").eq("meeting_id", id),
       supabase.from("profiles").select("id, name").order("name"),
-      supabase.from("paises").select("*").order("name"),
     ]);
 
     setIsAdmin(profile?.role === "admin");
     setMeeting(m);
     setParticipants((parts ?? []).map((p) => ({ id: p.user_id, name: p.profiles?.name })).filter((p) => p.name));
     setProfiles(profs ?? []);
-    setPaises(paisesData ?? []);
 
     await Promise.all([reloadItems(), reloadChecklist()]);
 
@@ -389,7 +386,7 @@ export default function ReunionDetallePage() {
                 value={paisDraft}
                 onChange={setPaisDraft}
                 fullWidth
-                options={paises.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
+                options={paisOptions(paises)}
               />
             </div>
             <div className="flex gap-2">

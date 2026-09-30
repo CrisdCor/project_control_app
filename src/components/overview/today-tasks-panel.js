@@ -11,6 +11,7 @@ import { CountryCodeTag } from "@/components/ui/country-tag";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { localTodayISO as todayISO } from "@/lib/dates";
 import { Pagination } from "@/components/ui/pagination";
+import { usePaises, paisOptions } from "@/lib/paises";
 
 const PAGE_SIZE = 6;
 
@@ -20,7 +21,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedOnce = useRef(false);
   const [drawerBitacoraId, setDrawerBitacoraId] = useState(null);
-  const [paisesById, setPaisesById] = useState({});
+  const { paises, paisesById } = usePaises();
   const [page, setPage] = useState(1);
 
   const [editingItem, setEditingItem] = useState(null);
@@ -70,15 +71,12 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
       activityQuery = activityQuery.eq("due_date", selectedDate);
     }
 
-    const [{ data: agendaRows }, bitacoraResult, { data: activityRows }, { data: paisesData }] = await Promise.all([
+    const [{ data: agendaRows }, bitacoraResult, { data: activityRows }] = await Promise.all([
       agendaQuery,
       bitacoraQuery ?? Promise.resolve({ data: [] }),
       activityQuery,
-      supabase.from("paises").select("*"),
     ]);
     const bitacoraRows = bitacoraResult.data;
-
-    setPaisesById(Object.fromEntries((paisesData ?? []).map((p) => [p.id, p])));
 
     const agenda = (agendaRows ?? []).map((a) => ({
       kind: "agenda",
@@ -290,10 +288,7 @@ export function TodayTasksPanel({ userId, selectedDate, onClearSelection, refres
                 value={editPaisId}
                 onChange={setEditPaisId}
                 fullWidth
-                options={Object.values(paisesById).map((p) => ({
-                  value: p.id,
-                  label: p.code ? `${p.code} · ${p.name}` : p.name,
-                }))}
+                options={paisOptions(paises)}
               />
               <div className="flex gap-2">
                 <button

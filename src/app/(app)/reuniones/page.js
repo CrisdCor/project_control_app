@@ -8,6 +8,7 @@ import { MeetingFormModal } from "@/components/reuniones/meeting-form-modal";
 import { CountryCodeTag } from "@/components/ui/country-tag";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PlusIcon, TrashIcon } from "@/components/icons";
+import { usePaises } from "@/lib/paises";
 
 const TABS = [
   { id: "activas", label: "Activas" },
@@ -22,7 +23,7 @@ export default function ReunionesPage() {
   const [meetings, setMeetings] = useState([]);
   const [profileNames, setProfileNames] = useState({});
   const [profiles, setProfiles] = useState([]);
-  const [paisesById, setPaisesById] = useState({});
+  const { paisesById } = usePaises();
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -52,9 +53,6 @@ export default function ReunionesPage() {
     const { data: profs } = await supabase.from("profiles").select("id, name").order("name");
     setProfiles(profs ?? []);
     setProfileNames(Object.fromEntries((profs ?? []).map((p) => [p.id, p.name])));
-
-    const { data: paises } = await supabase.from("paises").select("*");
-    setPaisesById(Object.fromEntries((paises ?? []).map((p) => [p.id, p])));
 
     setLoading(false);
   }

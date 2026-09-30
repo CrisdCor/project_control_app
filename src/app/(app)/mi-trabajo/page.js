@@ -11,6 +11,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { AlertIcon } from "@/components/icons";
 import { CountryCodeTag } from "@/components/ui/country-tag";
+import { usePaises } from "@/lib/paises";
 
 const PAGE_SIZE = 10;
 
@@ -35,15 +36,7 @@ export default function MiTrabajoPage() {
   const [hideFinished, setHideFinished] = useState(false);
   const [page, setPage] = useState(1);
   const [drawerId, setDrawerId] = useState(null);
-  const [paisesById, setPaisesById] = useState({});
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from("paises")
-      .select("*")
-      .then(({ data }) => setPaisesById(Object.fromEntries((data ?? []).map((p) => [p.id, p]))));
-  }, []);
+  const { paisesById } = usePaises();
 
   useEffect(() => {
     const supabase = createClient();

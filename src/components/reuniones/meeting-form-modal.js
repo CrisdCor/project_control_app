@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -10,8 +10,7 @@ import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { PlusIcon, GripIcon } from "@/components/icons";
 import { fetchOutstandingCommitments } from "@/lib/meetings";
 import { localTodayISO as todayISO } from "@/lib/dates";
-
-const GENERAL_PAIS_ID = "00000000-0000-0000-0000-000000000001";
+import { usePaises, paisOptions, GENERAL_PAIS_ID } from "@/lib/paises";
 
 export function MeetingFormModal({ open, onClose, profiles, pastMeetings, currentUserId, onCreated }) {
   const [title, setTitle] = useState("");
@@ -22,22 +21,12 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
   const [participantIds, setParticipantIds] = useState([]);
   const [previousMeetingId, setPreviousMeetingId] = useState("");
   const [paisId, setPaisId] = useState(GENERAL_PAIS_ID);
-  const [paises, setPaises] = useState([]);
+  const { paises } = usePaises();
   const [checklistDraft, setChecklistDraft] = useState("");
   const [checklistItems, setChecklistItems] = useState([]);
   const [dragIndex, setDragIndex] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const supabase = createClient();
-    supabase
-      .from("paises")
-      .select("*")
-      .order("name")
-      .then(({ data }) => setPaises(data ?? []));
-  }, [open]);
 
   function reset() {
     setTitle("");
@@ -178,7 +167,7 @@ export function MeetingFormModal({ open, onClose, profiles, pastMeetings, curren
             value={paisId}
             onChange={setPaisId}
             fullWidth
-            options={paises.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
+            options={paisOptions(paises)}
           />
         </div>
 

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { FilterDropdown } from "@/components/ui/filter-dropdown";
-import { createClient } from "@/lib/supabase/client";
 import { createUserAction, updateUserAction } from "@/app/(app)/usuarios/actions";
+import { useAreas, areaOptions } from "@/lib/areas";
 
 export function UserFormModal({ open, onClose, user, onSaved }) {
   const isEdit = Boolean(user);
@@ -12,7 +12,7 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [areaId, setAreaId] = useState(user?.area_id ?? "");
-  const [areas, setAreas] = useState([]);
+  const { areas } = useAreas();
   const [cargo, setCargo] = useState(user?.cargo ?? "");
   const [role, setRole] = useState(user?.role ?? "gestor");
   const [password, setPassword] = useState("");
@@ -35,13 +35,6 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
     setPassword("");
     setPhotoFile(null);
     setError(null);
-
-    const supabase = createClient();
-    supabase
-      .from("areas")
-      .select("*")
-      .order("name")
-      .then(({ data }) => setAreas(data ?? []));
   }, [open, user]);
 
   function resetAndClose() {
@@ -106,7 +99,7 @@ export function UserFormModal({ open, onClose, user, onSaved }) {
             value={areaId}
             onChange={setAreaId}
             fullWidth
-            options={areas.map((a) => ({ value: a.id, label: a.name }))}
+            options={areaOptions(areas)}
           />
         </div>
 
