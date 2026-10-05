@@ -81,7 +81,7 @@ export function Header({ profile, sidebarOn, onToggleSidebar, theme, onToggleThe
                   </button>
 
                   {isOpen && (
-                    <div className="flex flex-col pb-1 pl-4">
+                    <div className="flex flex-col pb-1 pl-4 pr-4">
                       {visibleItems.map((item) => {
                         const Icon = item.icon;
                         const active = pathname.startsWith(item.href);
