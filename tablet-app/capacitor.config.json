@@ -1,0 +1,13 @@
+{
+  "appId": "app.veloces.controlproyectos",
+  "appName": "Control de Proyectos",
+  "webDir": "www",
+  "server": {
+    "url": "https://project-control-app-green.vercel.app",
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

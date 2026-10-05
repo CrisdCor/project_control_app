@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Control de Proyectos</string>
+    <string name="title_activity_main">Control de Proyectos</string>
+    <string name="package_name">app.veloces.controlproyectos</string>
+    <string name="custom_url_scheme">app.veloces.controlproyectos</string>
+</resources>
