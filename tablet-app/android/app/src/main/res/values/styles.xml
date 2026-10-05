@@ -13,6 +13,10 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- la app no es de pantalla completa: las barras del sistema quedan fuera
+             del contenido, sobre fondo blanco con íconos oscuros -->
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
 
